@@ -1,0 +1,24 @@
+{
+  "resources": [],
+  "type": "isomorphic-lib",
+  "version": "v2",
+  "overrided": {
+    "linkedFolders": [],
+    "ignoreDepsPattern": [
+      "*"
+    ],
+    "includeAsDev": [],
+    "includeOnly": [
+      "tnp-db"
+    ],
+    "dependencies": {}
+  },
+  "linkedProjects": [],
+  "libReleaseOptions": {
+    "nodts": false,
+    "obscure": false,
+    "ugly": false
+  },
+  "license": "MIT",
+  "private": false
+}
