@@ -15,7 +15,7 @@ export class Hostile {
     } catch (err) {
       return this.error(err)
     }
-    lines.forEach(function (item) {
+    lines.forEach((item) => {
       if (item.length > 1) {
         console.log(item[0], chalk.green(item[1]))
       } else {
@@ -59,7 +59,7 @@ export class Hostile {
     } catch (err) {
       return this.error(err)
     }
-    lines.forEach(function (item) {
+    lines.forEach((item) => {
       if (item[1] === host) {
         try {
           hostile.remove(item[0], host)
@@ -78,7 +78,7 @@ export class Hostile {
   load(filePath) {
     var lines = this.parseFile(filePath)
 
-    lines.forEach(function (item) {
+    lines.forEach((item) => {
       this.set(item[0], item[1])
     })
     console.log(chalk.green('\nAdded %d hosts!'), lines.length)
@@ -91,7 +91,7 @@ export class Hostile {
   unload(filePath) {
     var lines = this.parseFile(filePath)
 
-    lines.forEach(function (item) {
+    lines.forEach((item) => {
       this.remove(item[1])
     })
     console.log(chalk.green('Removed %d hosts!'), lines.length)
