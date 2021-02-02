@@ -2,16 +2,20 @@
 import { URL } from 'url';
 import { Helpers } from 'tnp-helpers';
 import { VpnSplit } from './vpn-split.backend';
+import { EtcHosts, HostForServer } from './models.backend';
+
+
+const TO_DELETE = {
+
+} as EtcHosts;
 
 export async function run(args: string[]) {
-  const ins = await VpnSplit.Instance();
-  const command: 'server' | 'client' = args.shift() as any;
-  if (command === 'server') {
-    Helpers.clearConsole();
+  Helpers.clearConsole();
+  const ins = await VpnSplit.Instance(TO_DELETE);
+  if (args.join().trim() === '') {
     await ins.server();
-  }
-  if (command === 'client') {
-    await ins.client();
+  } else {
+    await ins.client(Helpers.urlParse(args.shift()));
   }
   process.stdin.resume();
 }

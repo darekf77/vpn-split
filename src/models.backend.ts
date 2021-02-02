@@ -10,6 +10,7 @@ export interface OptHostForServer {
   domain?: string;
   ipOrDomain?: string;
   aliases?: string[] | string;
+  isDefault?: boolean;
   name?: string;
   /**
    * if true - ip and domain will output empty string
@@ -19,9 +20,22 @@ export interface OptHostForServer {
 
 export class HostForServer implements OptHostForServer {
   private _data: OptHostForServer;
-  static From(ipOrDomain: string | URL | Pick<OptHostForServer, 'ipOrDomain' | 'aliases'>, name = '', disabled = false): HostForServer {
+
+  public clone() {
+    return HostForServer.From(this);
+  }
+  static From(ipOrDomain: string | URL | Pick<OptHostForServer | HostForServer, 'ipOrDomain' | 'aliases'>, name = '', disabled = false): HostForServer {
     if (!ipOrDomain) {
       return void 0;
+    }
+    if (_.isObject(ipOrDomain) && ipOrDomain instanceof HostForServer) {
+      const dataClone = _.cloneDeep(ipOrDomain._data) as OptHostForServer;
+      dataClone.name = (name && (name.trim() !== '')) ?
+        name : dataClone.name;
+      if (!_.isBoolean(dataClone.disabled)) {
+        dataClone.disabled = disabled;
+      }
+      return new HostForServer(dataClone);
     }
     if (_.isString(ipOrDomain)) {
       const parsed = Helpers.urlParse(ipOrDomain);
@@ -79,6 +93,9 @@ export class HostForServer implements OptHostForServer {
     }
     return this._data.ip;
   }
+  public set ip(newIpAddress: string) {
+    this._data.ip = newIpAddress;
+  }
   public get domain() {
     if (this.disabled) {
       return '';
@@ -104,6 +121,12 @@ export class HostForServer implements OptHostForServer {
   }
   public get disabled() {
     return this._data.disabled;
+  }
+  public get isDefault() {
+    return this._data.isDefault;
+  }
+  public get identifier() {
+    return _.kebabCase(this._data.name);
   }
   public set disabled(v) {
     this._data.disabled = v;

@@ -10,7 +10,8 @@
     "includeAsDev": [],
     "includeOnly": [
       "tnp-db",
-      "hostile"
+      "hostile",
+      "is-elevated"
     ],
     "dependencies": {}
   },

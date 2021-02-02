@@ -11,7 +11,8 @@
       "includeAsDev": [],
       "includeOnly": [
         "tnp-db",
-        "hostile"
+        "hostile",
+        "is-elevated"
       ],
       "dependencies": {}
     },
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "hostile": "~1.3.3",
+    "is-elevated": "~3.0.0",
     "tnp-db": "~0.0.16"
   },
   "devDependencies": {
@@ -225,6 +227,7 @@
     "sqlite3": "4.0.9",
     "static-columns": "~1.0.9",
     "string-similarity": "~4.0.2",
+    "sudo-block": "~3.0.0",
     "svg-png-converter": "0.0.9",
     "systeminformation": "^3.45.7",
     "task.js": "^0.1.5",
