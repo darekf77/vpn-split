@@ -84,9 +84,9 @@ export class VpnSplit {
   }
   public static async Instance(additionalDefaultHosts?: EtcHosts, cwd = process.cwd()) {
 
-    // if (!(await isElevated())) {
-    //   Helpers.error(`[vpn-split] Please run this program as sudo (or admin on windows)`, false, true)
-    // }
+    if (!(await isElevated())) {
+      Helpers.error(`[vpn-split] Please run this program as sudo (or admin on windows)`, false, true)
+    }
 
     if (!VpnSplit._instances[cwd]) {
       VpnSplit._instances[cwd] = new VpnSplit(_.merge(defaultHosts, additionalDefaultHosts), cwd);
@@ -102,7 +102,6 @@ export class VpnSplit {
   //#region server
   async server() {
     this.createCertificateIfNotExists();
-    this.__hostile.list();
     saveHosts(this.hosts);
     this.startServer(80);
     this.startServer(433);
@@ -132,10 +131,13 @@ export class VpnSplit {
   //#region client
   public async client(vpnServerTarget: URL) {
     if (!vpnServerTarget) {
+      const currentLocalIp = Helpers.localIpAddress();
       Helpers.error(`[vpn-server] Please provide target server
       Example:
-      vpn-server 192.168.0.1 # or whatever ip of your machine with vpn
-      `)
+      vpn-server ${currentLocalIp} # or whatever ip of your machine with vpn
+
+      # your local ip is: ${currentLocalIp}
+      `, false, false)
     }
     this.createCertificateIfNotExists();
     vpnServerTarget = Helpers.urlParse(
@@ -178,13 +180,15 @@ export class VpnSplit {
     }));
   }
 
-  private get serveKeyPath() { return path.join(this.cwd, 'tmp-' + config.file.server_key); }
-  private get serveCertPath() { return path.join(this.cwd, 'tmp-' + config.file.server_cert); }
+  private get serveKeyName() { return 'tmp-' + config.file.server_key; }
+  private get serveKeyPath() { return path.join(this.cwd, this.serveKeyName); }
+  private get serveCertName() { return 'tmp-' + config.file.server_cert; }
+  private get serveCertPath() { return path.join(this.cwd, this.serveKeyName); }
 
   private createCertificateIfNotExists() {
     if (!Helpers.exists(this.serveKeyPath) || !Helpers.exists(this.serveCertPath)) {
       Helpers.info(`[vpn-split] Generating new certification for localhost... please follow instructions..`);
-      Helpers.run(`openssl req -nodes -new -x509 -keyout ${config.file.server_key} -out ${config.file.server_cert}`,
+      Helpers.run(`openssl req -nodes -new -x509 -keyout ${this.serveKeyName} -out ${this.serveCertName}`,
         { cwd: this.cwd, output: true }).sync()
     }
   }
