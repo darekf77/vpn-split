@@ -260,5 +260,6 @@
     "vpn-split": "bin/vpn-split",
     "vpn-split-debug": "bin/vpn-split-debug"
   },
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "lastBuildTagHash": "4b11b081437c2d969c8d722b7aca8b49dc82db78"
 }
