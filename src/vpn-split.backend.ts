@@ -24,10 +24,11 @@ declare const global: any;
 const isElevated = require('is-elevated');
 //#endregion
 
+//#region consts
 const GENERATED = '#GENERATED_BY_NAVI_CLI#';
 
-var WINDOWS = process.platform === 'win32'
-var EOL = WINDOWS
+const WINDOWS = process.platform === 'win32'
+const EOL = WINDOWS
   ? '\r\n'
   : '\n'
 
@@ -53,6 +54,7 @@ const defaultHosts = {
     isDefault: true,
   } as OptHostForServer),
 } as EtcHosts;
+//#endregion
 
 export class VpnSplit {
 
@@ -68,6 +70,13 @@ export class VpnSplit {
   get hostsArrWithoutDefault() {
     return this.hostsArr.filter(f => !f.isDefault);
   }
+
+  private get serveKeyName() { return 'tmp-' + config.file.server_key; }
+  private get serveKeyPath() { return path.join(this.cwd, this.serveKeyName); }
+  private get serveCertName() { return 'tmp-' + config.file.server_cert; }
+  private get serveCertPath() { return path.join(this.cwd, this.serveCertName); }
+  private get serveCertChainName() { return 'tmp-' + config.file.server_chain_cert; }
+  private get serveCertChainPath() { return path.join(this.cwd, this.serveCertChainName); }
   //#endregion
 
   //#region fields
@@ -82,7 +91,8 @@ export class VpnSplit {
   ) {
     this.__hostile = new Hostile();
   }
-  public static async Instance(additionalDefaultHosts?: EtcHosts, cwd = process.cwd()) {
+  public static async Instance({ additionalDefaultHosts, cwd = process.cwd() }
+    : { additionalDefaultHosts?: EtcHosts; cwd?: string; } = {}) {
 
     if (!(await isElevated())) {
       Helpers.error(`[vpn-split] Please run this program as sudo (or admin on windows)`, false, true)
@@ -96,40 +106,90 @@ export class VpnSplit {
   //#endregion
 
   //#region privaet methods
+  //#region create certificate
+  private createCertificateIfNotExists() {
+    if (!Helpers.exists(this.serveKeyPath) || !Helpers.exists(this.serveCertPath)) {
+      Helpers.info(`[vpn-split] Generating new certification for localhost... please follow instructions..`);
+      const commandGen = `openssl req -nodes -new -x509 -keyout ${this.serveKeyName} -out ${this.serveCertName}`;
+      Helpers.run(commandGen, { cwd: this.cwd, output: true }).sync()
 
-  //#endregion
-
-  //#region server
-  async server() {
-    this.createCertificateIfNotExists();
-    saveHosts(this.hosts);
-    this.startServer(80);
-    this.startServer(433);
+      // Helpers.run(`openssl verify -verbose -x509_strict -CAfile ${this.serveKeyName} ${this.serveCertChainName}`,
+      //   { cwd: this.cwd, output: true }).sync()
+    }
   }
-
-  private startServer(port: 80 | 433) {
+  //#endregion
+  //#region start server
+  private startServer(testClientServe = false, vpnServerPassPort = config.ports.VPN_SPLIT_SERVER) {
     const app = express();
-
-    app.get(/^\/(.*)/, (
-      req: http.IncomingMessage & express.Request,
-      res: http.ServerResponse & express.Response) => {
-
-      res.send('hello')
+    this.initMidleware(app);
+    Helpers.network.from(app).handle((req, res) => {
+      res.send(`hello from here... `)
     });
 
-    this.initMidleware(app);
     const h = new http.Server(app);
 
-    h.listen(port, () => {
-      console.log(`Server listening on ${Helpers.urlParse(port).origin}
+    h.listen(vpnServerPassPort, () => {
+      console.log(`Server listening on ${Helpers.urlParse(vpnServerPassPort).origin}
       env: ${app.settings.env}
         `);
     });
   }
   //#endregion
+  //#region client listen
+  private async clientListenServer(port: 80 | 443, vpnServerTarget: URL) {
+    const isHttps = (port === 443);
+    // if (isHttps) {
+    //   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    // }
+    const app = express();
+    this.initMidleware(app);
+    Helpers.network.from(app).handle(async (req, res) => {
+      // res.send(`hello 80 or 443 - protocol:${req.protocol}`)
 
-  //#region client
-  public async client(vpnServerTarget: URL) {
+      const founded = this.hostsArr.find(f => f.hostnameFirstAlias === req.hostname);
+
+      if (founded) {
+        try {
+          const protocol = req.protocol;
+          const url = `${protocol}://${founded.hostnameIp}${req.originalUrl}`
+          const r = await axios({
+            url,
+            method: req.method,
+            headers: req.headers,
+            data: req.body,
+            responseType: 'arraybuffer',
+          }) as any;
+          console.log(r.status);
+          console.log(r.data);
+          console.log(r);
+          res.status(r.status).send(r.data);
+        } catch (err) {
+          res.sendStatus(err?.response?.status)
+        }
+      } else {
+        res.send(`Not found`);
+      }
+    });
+
+    const h = isHttps ? (new https.Server({
+      key: fse.readFileSync(this.serveKeyPath),
+      cert: fse.readFileSync(this.serveCertPath)
+    }, app)) : (new http.Server(app));
+
+    await Helpers.killProcessByPort(port)
+    await (new Promise((resolve, reject) => {
+      h.listen(port, () => {
+        console.log(`Passthrough ${isHttps ? 'SECURE' : ''} server`
+          + ` listening on por: ${port}
+        env: ${app.settings.env}
+          `);
+      });
+      resolve(void 0);
+    }));
+  }
+  //#endregion
+  //#region prevent bad target for client
+  private preventBadTargetForClient(vpnServerTarget: URL) {
     if (!vpnServerTarget) {
       const currentLocalIp = Helpers.localIpAddress();
       Helpers.error(`[vpn-server] Please provide target server
@@ -139,6 +199,22 @@ export class VpnSplit {
       # your local ip is: ${currentLocalIp}
       `, false, false)
     }
+  }
+  //#endregion
+  //#endregion
+
+  //#region server
+  async server() {
+    this.createCertificateIfNotExists();
+    saveHosts(this.hosts);
+    this.startServer();
+  }
+  //#endregion
+
+  //#region client
+
+  public async client(vpnServerTarget: URL) {
+    this.preventBadTargetForClient(vpnServerTarget);
     this.createCertificateIfNotExists();
     vpnServerTarget = Helpers.urlParse(
       `http://${vpnServerTarget.hostname}:${config.ports.VPN_SPLIT_SERVER}`
@@ -153,72 +229,37 @@ export class VpnSplit {
         return copy;
       });
     saveHosts(cloned);
-    await this.clientPassthroughServer(vpnServerTarget);
-    await this.clientListenServer(80);
-    await this.clientListenServer(443);
+    await this.clientListenServer(80, vpnServerTarget);
+    await this.clientListenServer(443, vpnServerTarget);
   }
 
-  private async clientPassthroughServer(vpnServerTarget: URL, port = config.ports.VPN_SPLIT_CLIENT) {
-    const app = express();
-    app.get(/^\/(.*)/, (
-      req: http.IncomingMessage & express.Request,
-      res: http.ServerResponse & express.Response) => {
+  //#endregion
 
-      res.send('hello')
-    });
+  //#region test mode server/client
+  //#region @notForNpm
+  async testModeServerClient() {
+    let vpnServerTarget = Helpers.urlParse(Helpers.localIpAddress());
+    this.preventBadTargetForClient(vpnServerTarget);
+    this.createCertificateIfNotExists();
+    this.startServer(true)
+    vpnServerTarget = Helpers.urlParse(
+      `http://${vpnServerTarget.hostname}:${config.ports.VPN_SPLIT_SERVER}`
+    );
 
-    this.initMidleware(app);
-    const h = new http.Server(app);
-
-    await (new Promise((resolve, reject) => {
-      h.listen(port, () => {
-        console.log(`Passthrough server listening on ${Helpers.urlParse(port).origin}
-        env: ${app.settings.env}
-          `);
+    const originalHosts = this.hostsArr;
+    const cloned = originalHosts
+      .map(c => {
+        const copy = c.clone();
+        if (!copy.isDefault) {
+          copy.ip = `127.0.0.1`;
+        }
+        return copy;
       });
-      resolve(void 0);
-    }));
+    saveHosts(cloned);
+    await this.clientListenServer(80, vpnServerTarget);
+    await this.clientListenServer(443, vpnServerTarget);
   }
-
-  private get serveKeyName() { return 'tmp-' + config.file.server_key; }
-  private get serveKeyPath() { return path.join(this.cwd, this.serveKeyName); }
-  private get serveCertName() { return 'tmp-' + config.file.server_cert; }
-  private get serveCertPath() { return path.join(this.cwd, this.serveKeyName); }
-
-  private createCertificateIfNotExists() {
-    if (!Helpers.exists(this.serveKeyPath) || !Helpers.exists(this.serveCertPath)) {
-      Helpers.info(`[vpn-split] Generating new certification for localhost... please follow instructions..`);
-      Helpers.run(`openssl req -nodes -new -x509 -keyout ${this.serveKeyName} -out ${this.serveCertName}`,
-        { cwd: this.cwd, output: true }).sync()
-    }
-  }
-
-  private async clientListenServer(port: 80 | 443) {
-    const isHttps = (port === 443);
-    const app = express();
-    app.get(/^\/(.*)/, (
-      req: http.IncomingMessage & express.Request,
-      res: http.ServerResponse & express.Response) => {
-
-      res.send(`hello 80 or 443 - protocol:${req.protocol}`)
-    });
-
-    this.initMidleware(app);
-    const h = isHttps ? (new https.Server({
-      key: fse.readFileSync(this.serveKeyPath),
-      cert: fse.readFileSync(this.serveCertPath)
-    }, app)) : (new http.Server(app));
-
-    await (new Promise((resolve, reject) => {
-      h.listen(port, () => {
-        console.log(`Passthrough ${isHttps ? 'SECURE' : ''} server`
-          + ` listening on por: ${port}
-        env: ${app.settings.env}
-          `);
-      });
-      resolve(void 0);
-    }));
-  }
+  //#endregion
   //#endregion
 
   //#region middle ware
@@ -248,14 +289,17 @@ export class VpnSplit {
 
 }
 
+//#region helpers
 
-
+//#region gen msg
 const genMsg = `
 ################################################
 ## This file is generated by coomand navi vpn ##
 ################################################
 `.trim() + EOL;
+//#endregion
 
+//#region save hosts
 function saveHosts(hosts: EtcHosts | HostForServer[]) {
   if (_.isArray(hosts)) {
     hosts = hosts.reduce((prev, curr) => {
@@ -264,9 +308,12 @@ function saveHosts(hosts: EtcHosts | HostForServer[]) {
       })
     }, {} as EtcHosts);
   }
-  Helpers.writeFile(HOST_FILE_PATH, parseHost(hosts));
+  const toSave = parseHost(hosts)
+  Helpers.writeFile(HOST_FILE_PATH, toSave);
 }
+//#endregion
 
+//#region parse hosts
 function parseHost(hosts: EtcHosts) {
   _.keys(hosts).forEach(hostName => {
     const v = hosts[hostName] as HostForServer;
@@ -277,5 +324,7 @@ function parseHost(hosts: EtcHosts) {
     return `${v.disabled ? '#' : ''}${v.ipOrDomain} ${(v.aliases as string[]).join(' ')}`
       + ` # ${v.name} ${GENERATED}`;
   }).join(EOL) + EOL + EOL + genMsg;
-
 }
+//#endregion
+
+//#endregion

@@ -113,6 +113,10 @@ export class HostForServer implements OptHostForServer {
     return this._data.aliases;
   }
 
+  public get firstAlias() {
+    return _.first(this.aliases);
+  }
+
   public get name() {
     return this._data.name;
   }
@@ -135,8 +139,35 @@ export class HostForServer implements OptHostForServer {
     if (this.disabled) {
       return '';
     }
-    return this.domain ? this.domain : this.ip;
+    const res = (this.domain ? this.domain : this.ip) || '';
+    return res;
+    // return res.startsWith('http') ? res : `http://${res}`;
   }
+
+  public get ipOrFirstAlias() {
+    if (this.disabled) {
+      return '';
+    }
+    const res = (this.firstAlias ? this.firstAlias : this.ip) || '';
+    return res;
+    // return res.startsWith('http') ? res : `http://${res}`;
+  }
+
+  public get hostname() {
+    const h = Helpers.urlParse(this.ipOrFirstAlias, true);
+    return h ? h.hostname : void 0;
+  }
+
+  public get hostnameFirstAlias() {
+    const h = Helpers.urlParse(this.firstAlias, true);
+    return h ? h.hostname : void 0;
+  }
+
+  public get hostnameIp() {
+    const h = Helpers.urlParse(this.ip);
+    return h ? h.hostname : void 0;
+  }
+
   public get nameWithIpOrDomain() {
     return chalk.underline(`${this.name} ${this.ipOrDomain}`);
   }

@@ -26,11 +26,18 @@ const TO_DELETE = {
 
 export async function run(args: string[]) {
   Helpers.clearConsole();
-  const ins = await VpnSplit.Instance(TO_DELETE);
-  if (args.join().trim() === '') {
-    await ins.server();
+  const ins = await VpnSplit.Instance({ additionalDefaultHosts: TO_DELETE });
+  type ArgType = { testModeServerClient: boolean; };
+  const opt = Helpers.cliTool.argsFrom<ArgType>(args);
+  args = Helpers.cliTool.cleanCommand<ArgType>(args, opt).split(' ');
+  if (opt.testModeServerClient) {
+    await ins['testModeServerClient']();
   } else {
-    await ins.client(Helpers.urlParse(args.shift()));
+    if (args.join().trim() === '') {
+      await ins.server();
+    } else {
+      await ins.client(Helpers.urlParse(args.shift()));
+    }
   }
   process.stdin.resume();
 }
