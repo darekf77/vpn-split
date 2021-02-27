@@ -125,7 +125,7 @@ export class VpnSplit {
   //#region proxy passthrough
 
   //#region start server passthrough
-  private async serverPassthrough(port: 80 | 443) {
+  private async serverPassthrough(port: 80 | 443 | 22) {
     const isHttps = (port === 443);
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     const app = express();
@@ -184,7 +184,7 @@ export class VpnSplit {
   //#endregion
 
   //#region start client passthrough
-  private async clientPassthrough(port: 80 | 443, vpnServerTarget: URL) {
+  private async clientPassthrough(port: 80 | 443 | 22, vpnServerTarget: URL) {
     const isHttps = (port === 443);
     // if (isHttps) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -237,12 +237,15 @@ export class VpnSplit {
   private preventBadTargetForClient(vpnServerTarget: URL) {
     if (!vpnServerTarget) {
       const currentLocalIp = Helpers.localIpAddress();
-      Helpers.error(`[vpn-server] Please provide target server
+      Helpers.error(`[vpn-server] Please provide (correct?) target server
       Example:
       vpn-server ${currentLocalIp} # or whatever ip of your machine with vpn
 
       # your local ip is: ${currentLocalIp}
-      `, false, false)
+
+      your args:
+      ${process.argv.slice(2).join(', ')}
+      `, false, true);
     }
   }
   //#endregion
@@ -255,6 +258,7 @@ export class VpnSplit {
     //#region modify /etc/host 80,443 to redirect to proper server domain/ip
     saveHosts(this.hosts);
     //#endregion
+    await this.serverPassthrough(22);
     await this.serverPassthrough(80);
     await this.serverPassthrough(443);
   }
@@ -298,6 +302,7 @@ export class VpnSplit {
     });
     saveHosts(cloned);
     //#endregion
+    await this.clientPassthrough(22, vpnServerTarget);
     await this.clientPassthrough(80, vpnServerTarget);
     await this.clientPassthrough(443, vpnServerTarget);
   }
