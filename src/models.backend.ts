@@ -9,7 +9,7 @@ export interface OptHostForServer {
   ip?: string;
   domain?: string;
   ipOrDomain?: string;
-  aliases?: string[] | string;
+  aliases?: string[];
   isDefault?: boolean;
   name?: string;
   /**
@@ -103,9 +103,12 @@ export class HostForServer implements OptHostForServer {
     return this._data.domain;
   }
 
-  public get aliases(): string | string[] {
+  public get aliases(): string[] {
     if (this.disabled) {
       return [];
+    }
+    if (_.isString(this._data.aliases)) {
+      return this._data.aliases.split(' ');
     }
     if (!_.isArray(this._data.aliases)) {
       return [];

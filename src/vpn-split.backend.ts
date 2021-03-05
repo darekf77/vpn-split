@@ -42,17 +42,17 @@ const from = HostForServer.From;
 const defaultHosts = {
   'localhost alias': from({
     ipOrDomain: '127.0.0.1',
-    aliases: 'localhost',
+    aliases: 'localhost' as any,
     isDefault: true,
   } as OptHostForServer),
   'broadcasthost': from({
     ipOrDomain: '255.255.255.255',
-    aliases: 'broadcasthost',
+    aliases: 'broadcasthost' as any,
     isDefault: true,
   } as OptHostForServer),
   'localhost alias ipv6': from({
     ipOrDomain: '::1',
-    aliases: 'localhost',
+    aliases: 'localhost' as any,
     isDefault: true,
   } as OptHostForServer),
 } as EtcHosts;
@@ -287,10 +287,10 @@ export class VpnSplit {
     //#region modfy clien 80, 443 to local ip of server
     const hosts = await this.getRemoteHosts(vpnServerTarget)
     const originalHosts = this.hostsArr;
-    const cloned = [
+    const cloned = _.values([
       ...originalHosts,
       ...hosts.map(h => HostForServer.From({
-        aliases: h.alias,
+        aliases: h.alias as any,
         ipOrDomain: h.ip
       }, `external host ${h.alias} ${h.ip}`))
     ].map(c => {
@@ -299,7 +299,13 @@ export class VpnSplit {
         copy.ip = `127.0.0.1`;
       }
       return copy;
-    });
+    }).reduce((prev, curr) => {
+
+      return _.merge(prev, {
+        [curr.aliases.join(' ')]: curr
+      })
+    }, {})) as any;
+
     saveHosts(cloned);
     //#endregion
     await this.clientPassthrough(22, vpnServerTarget);
@@ -331,6 +337,8 @@ function saveHosts(hosts: EtcHosts | HostForServer[]) {
     }, {} as EtcHosts);
   }
   const toSave = parseHost(hosts)
+  // Object.values(hosts).forEach( c => c )
+  // console.log(toSave)
   Helpers.writeFile(HOST_FILE_PATH, toSave);
 }
 //#endregion
