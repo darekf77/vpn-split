@@ -261,6 +261,7 @@ export class VpnSplit {
     await this.serverPassthrough(22);
     await this.serverPassthrough(80);
     await this.serverPassthrough(443);
+    Helpers.info(`Activated.`)
   }
   //#endregion
 
