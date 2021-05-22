@@ -1,27 +1,19 @@
 //#region imports
-import * as _ from 'lodash';
-import * as path from 'path';
+import {
+  _,
+  path,
+  fse,
+  http, https,
+} from 'tnp-core';
 import * as express from 'express';
-import * as http from 'http';
-import * as https from 'https';
 import * as httpProxy from 'http-proxy';
-import * as fse from 'fs-extra';
-import * as  cors from 'cors';
-import * as bodyParser from 'body-parser';
-import * as cookieParser from 'cookie-parser';
-import * as methodOverride from 'method-override';
-import * as fileUpload from 'express-fileupload';
-import { Models } from 'tnp-models';
 import { Helpers } from 'tnp-helpers';
 import { config } from 'tnp-config';
 import { URL } from 'url';
-import { CLASS } from 'typescript-class-helpers';
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models.backend';
-import axios, { AxiosResponse } from 'axios';
-import { Host } from '@angular/core';
-declare const global: any;
-const isElevated = require('is-elevated');
+import axios from 'axios';
+import isElevated from 'is-elevated';
 //#endregion
 
 //#region consts

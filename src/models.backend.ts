@@ -1,5 +1,5 @@
-import * as _ from 'lodash';
-import chalk from 'chalk';
+import { _ } from 'tnp-core';
+import { CLI } from 'tnp-cli';
 import { Helpers } from 'tnp-helpers';
 
 export type EtcHosts = { [hostName in string]: HostForServer; };
@@ -172,7 +172,7 @@ export class HostForServer implements OptHostForServer {
   }
 
   public get nameWithIpOrDomain() {
-    return chalk.underline(`${this.name} ${this.ipOrDomain}`);
+    return CLI.chalk.underline(`${this.name} ${this.ipOrDomain}`);
   }
   toString = () => {
     return `[string version] ${this.nameWithIpOrDomain}`
