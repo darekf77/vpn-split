@@ -4,6 +4,7 @@ import {
   path,
   fse,
   http, https,
+  isElevated
 } from 'tnp-core';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
@@ -13,7 +14,6 @@ import { URL } from 'url';
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models.backend';
 import axios from 'axios';
-import isElevated from 'is-elevated';
 //#endregion
 
 //#region consts
@@ -304,6 +304,7 @@ export class VpnSplit {
     await this.clientPassthrough(22, vpnServerTarget);
     await this.clientPassthrough(80, vpnServerTarget);
     await this.clientPassthrough(443, vpnServerTarget);
+    Helpers.info(`Client activated`)
   }
 
   //#endregion
