@@ -51,6 +51,7 @@ const defaultHosts = {
 //#endregion
 
 export class VpnSplit {
+  static HOST_FILE_PATH = HOST_FILE_PATH;
 
   //#region getters
   get hostsArr() {
