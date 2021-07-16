@@ -14,9 +14,14 @@ import { URL } from 'url';
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models.backend';
 import axios from 'axios';
+import { Log, Level } from 'ng2-logger';
+const log = Log.create('vpn-split', Level.INFO);
 //#endregion
 
 //#region consts
+export type VpnSplitPortsToPass = 80 | 443 | 22 | 8180 | 8080;
+export const VpnSplitPortsToPassArr = [80, 443, 22, 8180, 8080];
+
 const GENERATED = '#GENERATED_BY_NAVI_CLI#';
 
 const WINDOWS = process.platform === 'win32'
@@ -117,8 +122,36 @@ export class VpnSplit {
 
   //#region proxy passthrough
 
+  getTarget(req: express.Request, res: express.Response, port: number, hostname: string) {
+    return `${req.protocol}://${hostname}`;
+  }
+
+  getProxyConfig(req: express.Request, res: express.Response, port: number, hostname?: string) {
+    const serverPassthrough = !!hostname;
+    const target = this.getTarget(req, res, port, serverPassthrough ? hostname : req.hostname);
+    log.d(`[target] [${serverPassthrough ? 'server' : 'client'}] ${target}, ${hostname}, ${req.protocol}, ${req.ip}, ${req.originalUrl}`)
+    return {
+      target,
+      ssl: {
+        key: fse.readFileSync(this.serveKeyPath),
+        cert: fse.readFileSync(this.serveCertPath)
+      },
+      secure: false,
+    } as httpProxy.ServerOptions
+  }
+
+  getNotFoundMsg(req: express.Request, res: express.Response, port: number) {
+    return `hello from here... server passthrough
+    protocol: ${req.protocol} <br>
+    hostname: ${req.hostname} <br>
+    originalUrl: ${req.originalUrl} <br>
+    req.method ${req.method} <br>
+    SERVERS_PATH ${SERVERS_PATH} <br>
+    `;
+  }
+
   //#region start server passthrough
-  private async serverPassthrough(port: 80 | 443 | 22) {
+  private async serverPassthrough(port: VpnSplitPortsToPass) {
     const isHttps = (port === 443);
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     const app = express();
@@ -137,24 +170,13 @@ export class VpnSplit {
             return { ip: h.ip, alias: Helpers.arrays.from(h.aliases).join(' ') };
           })));
         } else {
-          res.send(`hello from here... server passthrough
-          protocol: ${req.protocol} <br>
-          hostname: ${req.hostname} <br>
-          originalUrl: ${req.originalUrl} <br>
-          `);
+          const msg = this.getNotFoundMsg(req, res, port);
+          log.d(msg)
+          res.send(msg);
         }
-
         next();
       } else {
-        const target = `${req.protocol}://${req.hostname}`;
-        proxy.web(req, res, {
-          target,
-          ssl: {
-            key: fse.readFileSync(this.serveKeyPath),
-            cert: fse.readFileSync(this.serveCertPath)
-          },
-          secure: false
-        }, next);
+        proxy.web(req, res, this.getProxyConfig(req, res, port), next);
       }
     });
 
@@ -166,7 +188,7 @@ export class VpnSplit {
     await Helpers.killProcessByPort(port)
     await (new Promise((resolve, reject) => {
       h.listen(port, () => {
-        console.log(`Passthrough ${isHttps ? 'SECURE' : ''} server`
+        log.i(`Passthrough ${isHttps ? 'SECURE' : ''} server`
           + ` listening on por: ${port}
         env: ${app.settings.env}
           `);
@@ -177,7 +199,7 @@ export class VpnSplit {
   //#endregion
 
   //#region start client passthrough
-  private async clientPassthrough(port: 80 | 443 | 22, vpnServerTarget: URL) {
+  private async clientPassthrough(port: VpnSplitPortsToPass, vpnServerTarget: URL) {
     const isHttps = (port === 443);
     // if (isHttps) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -187,22 +209,12 @@ export class VpnSplit {
 
     app.use((req, res, next) => {
       if (req.hostname === 'localhost') {
-        res.send(`hello from here... client passthrough
-      protocol: ${req.protocol} <br>
-      hostname: ${req.hostname} <br>
-      originalUrl: ${req.originalUrl} <br>
-      `);
+        const msg = this.getNotFoundMsg(req, res, port);
+        log.d(msg)
+        res.send(msg);
         next();
       } else {
-        const target = `${req.protocol}://${vpnServerTarget.hostname}`;
-        proxy.web(req, res, {
-          target,
-          ssl: {
-            key: fse.readFileSync(this.serveKeyPath),
-            cert: fse.readFileSync(this.serveCertPath)
-          },
-          secure: false
-        }, next);
+        proxy.web(req, res, this.getProxyConfig(req, res, port, vpnServerTarget.hostname), next);
       }
     });
 
@@ -214,7 +226,7 @@ export class VpnSplit {
     await Helpers.killProcessByPort(port)
     await (new Promise((resolve, reject) => {
       h.listen(port, () => {
-        console.log(`Passthrough ${isHttps ? 'SECURE' : ''} client`
+        log.i(`Passthrough ${isHttps ? 'SECURE' : ''} client`
           + ` listening on port: ${port}
         env: ${app.settings.env}
           `);
@@ -251,9 +263,10 @@ export class VpnSplit {
     //#region modify /etc/host 80,443 to redirect to proper server domain/ip
     saveHosts(this.hosts);
     //#endregion
-    await this.serverPassthrough(22);
-    await this.serverPassthrough(80);
-    await this.serverPassthrough(443);
+    for (let index = 0; index < VpnSplitPortsToPassArr.length; index++) {
+      const portToPassthrough = VpnSplitPortsToPassArr[index];
+      await this.serverPassthrough(portToPassthrough as any);
+    }
     Helpers.info(`Activated.`)
   }
   //#endregion
@@ -302,9 +315,10 @@ export class VpnSplit {
 
     saveHosts(cloned);
     //#endregion
-    await this.clientPassthrough(22, vpnServerTarget);
-    await this.clientPassthrough(80, vpnServerTarget);
-    await this.clientPassthrough(443, vpnServerTarget);
+    for (let index = 0; index < VpnSplitPortsToPassArr.length; index++) {
+      const portToPassthrough = VpnSplitPortsToPassArr[index];
+      await this.clientPassthrough(portToPassthrough as any, vpnServerTarget);
+    }
     Helpers.info(`Client activated`)
   }
 
