@@ -137,6 +137,8 @@ export class VpnSplit {
         cert: fse.readFileSync(this.serveCertPath)
       },
       secure: false,
+      followRedirects: true,
+      // changeOrigin: true,
     } as httpProxy.ServerOptions
   }
 
@@ -148,6 +150,26 @@ export class VpnSplit {
     req.method ${req.method} <br>
     SERVERS_PATH ${SERVERS_PATH} <br>
     `;
+  }
+
+  get headersToRemove() {
+    return [
+      // 'Strict-Transport-Security',
+      // 'upgrade-insecure-requests',
+      // 'Content-Security-Policy',
+      // 'Upgrade-Insecure-Requests',
+      // 'content-security-policy',
+    ]
+  }
+
+  filterHeaders(
+    req: http.IncomingMessage & express.Request,
+    res: http.ServerResponse & express.Response,
+  ) {
+    this.headersToRemove.forEach(headerName => {
+      delete req.headers[headerName];
+      res.setHeader(headerName, '');
+    });
   }
 
   //#region start server passthrough
@@ -163,7 +185,13 @@ export class VpnSplit {
       ...Helpers.allLocalIpAddresses().map(a => a.hostname)
     ];
 
-    app.use((req, res, next) => {
+    app.use((
+      req: http.IncomingMessage & express.Request,
+      res: http.ServerResponse & express.Response,
+      next
+    ) => {
+      this.filterHeaders(req, res);
+
       if (currentLocalIps.includes(req.hostname)) {
         if (req.method === 'GET' && req.originalUrl === SERVERS_PATH) {
           res.send(JSON.stringify(this.hostsArrWithoutDefault.map(h => {
@@ -207,7 +235,13 @@ export class VpnSplit {
     const app = express();
     const proxy = httpProxy.createProxyServer({});
 
-    app.use((req, res, next) => {
+    app.use((
+      req: http.IncomingMessage & express.Request,
+      res: http.ServerResponse & express.Response,
+      next
+    ) => {
+      this.filterHeaders(req, res);
+
       if (req.hostname === 'localhost') {
         const msg = this.getNotFoundMsg(req, res, port);
         log.d(msg)
