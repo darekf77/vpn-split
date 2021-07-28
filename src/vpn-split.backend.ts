@@ -105,9 +105,9 @@ export class VpnSplit {
   }
   //#endregion
 
-  //#region privaet methods
+  //#region private methods
 
-  //#region create certificate
+  //#region private methods / create certificate
   private createCertificateIfNotExists() {
     if (!Helpers.exists(this.serveKeyPath) || !Helpers.exists(this.serveCertPath)) {
       Helpers.info(`[vpn-split] Generating new certification for localhost... please follow instructions..`);
@@ -120,7 +120,7 @@ export class VpnSplit {
   }
   //#endregion
 
-  //#region proxy passthrough
+  //#region private methods / proxy passthrough
 
   getTarget(req: express.Request, res: express.Response, port: number, hostname: string) {
     return `${req.protocol}://${hostname}`;
@@ -272,7 +272,7 @@ export class VpnSplit {
 
   //#endregion
 
-  //#region prevent bad target for client
+  //#region private methods / prevent bad target for client
   private preventBadTargetForClient(vpnServerTarget: URL) {
     if (!vpnServerTarget) {
       const currentLocalIp = Helpers.localIpAddress();
