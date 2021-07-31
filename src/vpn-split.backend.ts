@@ -137,7 +137,7 @@ export class VpnSplit {
         cert: fse.readFileSync(this.serveCertPath)
       },
       secure: false,
-      followRedirects: true,
+      // followRedirects: true,
       // changeOrigin: true,
     } as httpProxy.ServerOptions
   }
