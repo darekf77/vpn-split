@@ -255,7 +255,7 @@
     "underscore": "1.9.1",
     "uuid": "8.3.2",
     "validator": "9.2.0",
-    "vpn-split": "~0.0.9",
+    "vpn-split": "~0.0.10",
     "wait.for": "0.6.6",
     "watch": "1.0.2",
     "webpack-cli": "3.3.11",
@@ -269,5 +269,5 @@
     "vpn-split-debug": "bin/vpn-split-debug"
   },
   "version": "0.0.10",
-  "lastBuildTagHash": "77da7cc8a1681de9f6d8c45dc27f18f66aee2e02"
+  "lastBuildTagHash": "edcbf41e66e342396cbb66d99814f65c2b62974d"
 }
