@@ -20,7 +20,7 @@ const log = Log.create('vpn-split', Level.INFO);
 
 //#region consts
 export type VpnSplitPortsToPass = 80 | 443 | 22 | 8180 | 8080;
-export const VpnSplitPortsToPassArr = [80, 443, 22, 8180, 8080];
+
 
 const GENERATED = '#GENERATED_BY_NAVI_CLI#';
 
@@ -86,20 +86,26 @@ export class VpnSplit {
   //#region singleton
   private static _instances = {};
   private constructor(
+    private portsToPass: number[],
     private hosts: EtcHosts,
     private cwd: string
   ) {
     this.__hostile = new Hostile();
   }
-  public static async Instance({ additionalDefaultHosts, cwd = process.cwd() }
-    : { additionalDefaultHosts?: EtcHosts; cwd?: string; } = {}) {
+  public static async Instance({
+    ports = [80, 443, 22, 8180, 8080],
+    additionalDefaultHosts = {}, cwd = process.cwd()
+  }
+    : { ports?: number[], additionalDefaultHosts?: EtcHosts; cwd?: string; } = {}) {
+
+    console.log('ports', ports)
 
     if (!(await isElevated())) {
       Helpers.error(`[vpn-split] Please run this program as sudo (or admin on windows)`, false, true)
     }
 
     if (!VpnSplit._instances[cwd]) {
-      VpnSplit._instances[cwd] = new VpnSplit(_.merge(defaultHosts, additionalDefaultHosts), cwd);
+      VpnSplit._instances[cwd] = new VpnSplit(ports, _.merge(defaultHosts, additionalDefaultHosts), cwd);
     }
     return VpnSplit._instances[cwd] as VpnSplit;
   }
@@ -297,8 +303,8 @@ export class VpnSplit {
     //#region modify /etc/host 80,443 to redirect to proper server domain/ip
     saveHosts(this.hosts);
     //#endregion
-    for (let index = 0; index < VpnSplitPortsToPassArr.length; index++) {
-      const portToPassthrough = VpnSplitPortsToPassArr[index];
+    for (let index = 0; index < this.portsToPass.length; index++) {
+      const portToPassthrough = this.portsToPass[index];
       await this.serverPassthrough(portToPassthrough as any);
     }
     Helpers.info(`Activated.`)
@@ -349,8 +355,8 @@ export class VpnSplit {
 
     saveHosts(cloned);
     //#endregion
-    for (let index = 0; index < VpnSplitPortsToPassArr.length; index++) {
-      const portToPassthrough = VpnSplitPortsToPassArr[index];
+    for (let index = 0; index < this.portsToPass.length; index++) {
+      const portToPassthrough = this.portsToPass[index];
       await this.clientPassthrough(portToPassthrough as any, vpnServerTarget);
     }
     Helpers.info(`Client activated`)
