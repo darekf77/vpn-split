@@ -145,7 +145,7 @@
   "mkdirp": "0.5.1",
   "mocha": "5.2.0",
   "moment": "2.22.2",
-  "morphi": "~4.0.43",
+  "morphi": "~4.0.44",
   "ng-modal-lib": "0.0.6",
   "ng-packagr": "5.7.1",
   "ng-talkback": "~2.4.19",
@@ -218,7 +218,7 @@
   "underscore": "1.9.1",
   "uuid": "8.3.2",
   "validator": "9.2.0",
-  "vpn-split": "~0.0.11",
+  "vpn-split": "~0.0.12",
   "watch": "1.0.2",
   "webpack-cli": "3.3.11",
   "zone.js": "0.10.2"
