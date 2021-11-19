@@ -22,5 +22,6 @@
     "ugly": false
   },
   "license": "MIT",
-  "private": false
+  "private": false,
+  "workerPlugins": {}
 }
