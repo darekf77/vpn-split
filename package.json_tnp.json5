@@ -1,7 +1,5 @@
 {
   "resources": [],
-  "type": "isomorphic-lib",
-  "version": "v2",
   "overrided": {
     "linkedFolders": [],
     "ignoreDepsPattern": [
@@ -21,6 +19,8 @@
     "obscure": false,
     "ugly": false
   },
+  "type": "isomorphic-lib",
+  "version": "v3",
   "license": "MIT",
   "private": false,
   "workerPlugins": {}
