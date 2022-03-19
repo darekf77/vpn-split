@@ -12,5 +12,6 @@
     "vpn-split-debug": "bin/vpn-split-debug"
   },
   "version": "13.0.5",
-  "lastBuildTagHash": "ba469ad92796d7bf642068962eced38487132eea"
+  "lastBuildTagHash": "ba469ad92796d7bf642068962eced38487132eea",
+  "devDependencies": {}
 }
