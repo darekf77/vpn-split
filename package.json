@@ -2,7 +2,7 @@
   "dependencies": {
     "hostile": "1.3.3",
     "is-elevated": "3.0.0",
-    "tnp-db": "~13.0.16"
+    "tnp-db": "~13.0.18"
   },
   "name": "vpn-split",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "vpn-split": "bin/vpn-split",
     "vpn-split-debug": "bin/vpn-split-debug"
   },
-  "version": "13.0.7",
+  "version": "13.0.8",
   "lastBuildTagHash": "ba469ad92796d7bf642068962eced38487132eea",
   "devDependencies": {
     "@angular-devkit/build-angular": "~13.2.5",
@@ -125,7 +125,7 @@
     "file-loader": "1.1.5",
     "firedev": "^13",
     "firedev-crud": "~13.0.16",
-    "firedev-crud-deamon": "~13.0.8",
+    "firedev-crud-deamon": "~13.0.10",
     "firedev-ports": "~13.0.11",
     "firedev-storage": "~13.0.7",
     "fkill": "6.1.0",
@@ -218,8 +218,8 @@
     "systeminformation": "3.45.7",
     "task.js": "0.1.5",
     "tnp-cli": "~13.0.8",
-    "tnp-config": "~13.0.12",
-    "tnp-core": "~13.0.27",
+    "tnp-config": "~13.0.13",
+    "tnp-core": "~13.0.30",
     "tnp-helpers": "~13.0.15",
     "tnp-models": "~13.0.11",
     "tnp-ui": "~13.0.10",
@@ -234,7 +234,7 @@
     "underscore": "1.9.1",
     "uuid": "8.3.2",
     "validator": "9.2.0",
-    "vpn-split": "13.0.6",
+    "vpn-split": "13.0.7",
     "watch": "1.0.2",
     "zone.js": "~0.11.4"
   }
