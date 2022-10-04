@@ -1,5 +1,6 @@
 {
   "resources": [],
+
   "overrided": {
     "linkedFolders": [],
     "ignoreDepsPattern": [
@@ -13,15 +14,19 @@
     ],
     "dependencies": {}
   },
+
   "linkedProjects": [],
+  'linkedRepos': [],
+
   "libReleaseOptions": {
     "nodts": false,
     "obscure": false,
     "ugly": false
   },
+
   "type": "isomorphic-lib",
   "version": "v3",
   "license": "MIT",
   "private": false,
-  "workerPlugins": {}
+  "workerPlugins": {},
 }
