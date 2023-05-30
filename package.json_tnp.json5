@@ -3,16 +3,21 @@
 
   "overrided": {
     "linkedFolders": [],
+
     "ignoreDepsPattern": [
       "*"
     ],
+
     "includeAsDev": [],
+
     "includeOnly": [
       "tnp-db",
       "hostile",
       "is-elevated"
     ],
-    "dependencies": {}
+
+    "dependencies": {},
+    'npmFixes': [],
   },
 
   "linkedProjects": [],
