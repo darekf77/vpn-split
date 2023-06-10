@@ -1,4 +1,36 @@
 {
+  "tnp": {
+    "resources": [],
+    "overrided": {
+      "linkedFolders": [],
+      "ignoreDepsPattern": [
+        "*"
+      ],
+      "includeAsDev": [],
+      "includeOnly": [
+        "tnp-db",
+        "hostile",
+        "is-elevated"
+      ],
+      "dependencies": {},
+      "npmFixes": []
+    },
+    "linkedProjects": [],
+    "smartContainerBuildTarget": "",
+    "linkedRepos": [],
+    "libReleaseOptions": {
+      "nodts": false,
+      "obscure": false,
+      "ugly": false,
+      "includeNodeModules": false
+    },
+    "smartContainerTarget": "",
+    "type": "isomorphic-lib",
+    "version": "v3",
+    "license": "MIT",
+    "private": false,
+    "workerPlugins": {}
+  },
   "dependencies": {
     "hostile": "~1.3.3",
     "is-elevated": "~3.0.0",
