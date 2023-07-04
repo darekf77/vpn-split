@@ -4,7 +4,9 @@ import {
   path,
   fse,
   http, https,
-  isElevated
+  isElevated,
+  crossPlatformPath,
+  os,
 } from 'tnp-core';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
@@ -30,6 +32,8 @@ const EOL = WINDOWS
   : '\n';
 
 const SERVERS_PATH = '/$$$$servers$$$$';
+
+const HOST_FILE_PATHUSER = crossPlatformPath([os.userInfo().homedir, 'hosts-file__vpn-split']);
 
 const HOST_FILE_PATH = WINDOWS
   ? 'C:/Windows/System32/drivers/etc/hosts'
@@ -94,13 +98,18 @@ export class VpnSplit {
   }
   public static async Instance({
     ports = [80, 443, 22, 8180, 8080],
-    additionalDefaultHosts = {}, cwd = process.cwd()
+    additionalDefaultHosts = {},
+    cwd = process.cwd(),
+    allowNotSudo = false
   }
-    : { ports?: number[], additionalDefaultHosts?: EtcHosts; cwd?: string; } = {}) {
+    : { ports?: number[], additionalDefaultHosts?: EtcHosts; cwd?: string; allowNotSudo?: boolean; } = {}) {
 
     console.log('ports', ports)
+    // console.log({
+    //   allowNotSudo
+    // })
 
-    if (!(await isElevated())) {
+    if (!(await isElevated()) && !allowNotSudo) {
       Helpers.error(`[vpn-split] Please run this program as sudo (or admin on windows)`, false, true)
     }
 
@@ -298,10 +307,10 @@ export class VpnSplit {
   //#endregion
 
   //#region server
-  async server() {
+  async server(saveHostInUserFolder = false) {
     this.createCertificateIfNotExists();
     //#region modify /etc/host 80,443 to redirect to proper server domain/ip
-    saveHosts(this.hosts);
+    saveHosts(this.hosts, saveHostInUserFolder);
     //#endregion
     for (let index = 0; index < this.portsToPass.length; index++) {
       const portToPassthrough = this.portsToPass[index];
@@ -328,7 +337,7 @@ export class VpnSplit {
     }
   }
 
-  public async client(vpnServerTarget: URL) {
+  public async client(vpnServerTarget: URL, saveHostInUserFolder = false) {
     this.preventBadTargetForClient(vpnServerTarget);
     this.createCertificateIfNotExists();
     //#region modfy clien 80, 443 to local ip of server
@@ -353,7 +362,7 @@ export class VpnSplit {
       })
     }, {})) as any;
 
-    saveHosts(cloned);
+    saveHosts(cloned, saveHostInUserFolder);
     //#endregion
     for (let index = 0; index < this.portsToPass.length; index++) {
       const portToPassthrough = this.portsToPass[index];
@@ -377,7 +386,7 @@ const genMsg = `
 //#endregion
 
 //#region save hosts
-function saveHosts(hosts: EtcHosts | HostForServer[]) {
+function saveHosts(hosts: EtcHosts | HostForServer[], saveHostInUserFolder = false) {
   if (_.isArray(hosts)) {
     hosts = hosts.reduce((prev, curr) => {
       return _.merge(prev, {
@@ -385,21 +394,29 @@ function saveHosts(hosts: EtcHosts | HostForServer[]) {
       })
     }, {} as EtcHosts);
   }
-  const toSave = parseHost(hosts)
+  const toSave = parseHost(hosts, saveHostInUserFolder)
   // Object.values(hosts).forEach( c => c )
   // console.log(toSave)
-  Helpers.writeFile(HOST_FILE_PATH, toSave);
+  if (saveHostInUserFolder) {
+    Helpers.writeFile(HOST_FILE_PATHUSER, toSave);
+  } else {
+    Helpers.writeFile(HOST_FILE_PATH, toSave);
+  }
+
 }
 //#endregion
 
 //#region parse hosts
-function parseHost(hosts: EtcHosts) {
+function parseHost(hosts: EtcHosts, saveHostInUserFolder = false) {
   _.keys(hosts).forEach(hostName => {
     const v = hosts[hostName] as HostForServer;
     v.name = hostName;
   });
   return genMsg + EOL + _.keys(hosts).map(hostName => {
     const v = hosts[hostName] as HostForServer;
+    if (saveHostInUserFolder) {
+      return `${v.disabled ? '#' : ''}${v.ipOrDomain} ${(v.aliases as string[]).join(' ')}`;
+    }
     return `${v.disabled ? '#' : ''}${v.ipOrDomain} ${(v.aliases as string[]).join(' ')}`
       + ` # ${v.name} ${GENERATED}`;
   }).join(EOL) + EOL + EOL + genMsg;
