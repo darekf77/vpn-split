@@ -16,9 +16,9 @@ export async function run(args: string[]) {
     // await ins['testModeServerClient']();
   } else {
     if (args.join().trim() === '') {
-      await ins.server();
+      await ins.startServer();
     } else {
-      await ins.client(Helpers.urlParse(args.shift()));
+      await ins.startClient(Helpers.urlParse(args.shift()));
     }
   }
   process.stdin.resume();

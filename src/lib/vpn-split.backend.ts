@@ -120,7 +120,81 @@ export class VpnSplit {
   }
   //#endregion
 
+  //#region start server
+  async startServer(saveHostInUserFolder = false) {
+    this.createCertificateIfNotExists();
+    //#region modify /etc/host 80,443 to redirect to proper server domain/ip
+    saveHosts(this.hosts, { saveHostInUserFolder });
+    //#endregion
+    for (let index = 0; index < this.portsToPass.length; index++) {
+      const portToPassthrough = this.portsToPass[index];
+      await this.serverPassthrough(portToPassthrough as any);
+    }
+    Helpers.info(`Activated.`)
+  }
+  //#endregion
+
+  //#region apply hosts
+  public applyHosts(hosts: EtcHosts) {
+    // console.log(hosts);
+    saveHosts(hosts);
+  }
+  //#endregion
+
+  //#region start client
+  public async startClient(vpnServerTarget: URL, saveHostInUserFolder = false) {
+    this.preventBadTargetForClient(vpnServerTarget);
+    this.createCertificateIfNotExists();
+    //#region modfy clien 80, 443 to local ip of server
+    const hosts = await this.getRemoteHosts(vpnServerTarget)
+    const originalHosts = this.hostsArr;
+    const cloned = _.values([
+      ...originalHosts,
+      ...hosts.map(h => HostForServer.From({
+        aliases: h.alias as any,
+        ipOrDomain: h.ip
+      }, `external host ${h.alias} ${h.ip}`))
+    ].map(c => {
+      const copy = c.clone();
+      if (!copy.isDefault) {
+        copy.ip = `127.0.0.1`;
+      }
+      return copy;
+    }).reduce((prev, curr) => {
+
+      return _.merge(prev, {
+        [curr.aliases.join(' ')]: curr
+      })
+    }, {})) as any;
+
+    saveHosts(cloned, { saveHostInUserFolder });
+    //#endregion
+    for (let index = 0; index < this.portsToPass.length; index++) {
+      const portToPassthrough = this.portsToPass[index];
+      await this.clientPassthrough(portToPassthrough as any, vpnServerTarget);
+    }
+    Helpers.info(`Client activated`)
+  }
+  //#endregion
+
   //#region private methods
+
+  //#region private methods / get remote hosts
+  private async getRemoteHosts(vpnServerTarget: URL) {
+    try {
+      const url = `http://${vpnServerTarget.hostname}${SERVERS_PATH}`;
+      const response = await axios({
+        url,
+        method: 'GET',
+      }) as any;
+      return response.data as { ip: string; alias: string; }[];
+    } catch (err) {
+      Helpers.error(`Remote server: ${vpnServerTarget.hostname} maybe inactive...`
+        + ` nothing to passthrought `, true, true);
+      return [];
+    }
+  }
+  //#endregion
 
   //#region private methods / create certificate
   private createCertificateIfNotExists() {
@@ -305,74 +379,6 @@ export class VpnSplit {
   //#endregion
 
   //#endregion
-
-  //#region server
-  async server(saveHostInUserFolder = false) {
-    this.createCertificateIfNotExists();
-    //#region modify /etc/host 80,443 to redirect to proper server domain/ip
-    saveHosts(this.hosts, saveHostInUserFolder);
-    //#endregion
-    for (let index = 0; index < this.portsToPass.length; index++) {
-      const portToPassthrough = this.portsToPass[index];
-      await this.serverPassthrough(portToPassthrough as any);
-    }
-    Helpers.info(`Activated.`)
-  }
-  //#endregion
-
-  //#region client
-
-  private async getRemoteHosts(vpnServerTarget: URL) {
-    try {
-      const url = `http://${vpnServerTarget.hostname}${SERVERS_PATH}`;
-      const response = await axios({
-        url,
-        method: 'GET',
-      }) as any;
-      return response.data as { ip: string; alias: string; }[];
-    } catch (err) {
-      Helpers.error(`Remote server: ${vpnServerTarget.hostname} maybe inactive...`
-        + ` nothing to passthrought `, true, true);
-      return [];
-    }
-  }
-
-  public async client(vpnServerTarget: URL, saveHostInUserFolder = false) {
-    this.preventBadTargetForClient(vpnServerTarget);
-    this.createCertificateIfNotExists();
-    //#region modfy clien 80, 443 to local ip of server
-    const hosts = await this.getRemoteHosts(vpnServerTarget)
-    const originalHosts = this.hostsArr;
-    const cloned = _.values([
-      ...originalHosts,
-      ...hosts.map(h => HostForServer.From({
-        aliases: h.alias as any,
-        ipOrDomain: h.ip
-      }, `external host ${h.alias} ${h.ip}`))
-    ].map(c => {
-      const copy = c.clone();
-      if (!copy.isDefault) {
-        copy.ip = `127.0.0.1`;
-      }
-      return copy;
-    }).reduce((prev, curr) => {
-
-      return _.merge(prev, {
-        [curr.aliases.join(' ')]: curr
-      })
-    }, {})) as any;
-
-    saveHosts(cloned, saveHostInUserFolder);
-    //#endregion
-    for (let index = 0; index < this.portsToPass.length; index++) {
-      const portToPassthrough = this.portsToPass[index];
-      await this.clientPassthrough(portToPassthrough as any, vpnServerTarget);
-    }
-    Helpers.info(`Client activated`)
-  }
-
-  //#endregion
-
 }
 
 //#region helpers
@@ -386,7 +392,10 @@ const genMsg = `
 //#endregion
 
 //#region save hosts
-function saveHosts(hosts: EtcHosts | HostForServer[], saveHostInUserFolder = false) {
+function saveHosts(hosts: EtcHosts | HostForServer[], options?: {
+  saveHostInUserFolder: boolean
+}) {
+  const { saveHostInUserFolder } = options || {} as any;
   if (_.isArray(hosts)) {
     hosts = hosts.reduce((prev, curr) => {
       return _.merge(prev, {
@@ -407,7 +416,10 @@ function saveHosts(hosts: EtcHosts | HostForServer[], saveHostInUserFolder = fal
 //#endregion
 
 //#region parse hosts
-function parseHost(hosts: EtcHosts, saveHostInUserFolder = false) {
+function parseHost(hosts: EtcHosts, options: {
+  saveHostInUserFolder: boolean
+}) {
+  const { saveHostInUserFolder } = options || {} as any;
   _.keys(hosts).forEach(hostName => {
     const v = hosts[hostName] as HostForServer;
     v.name = hostName;
