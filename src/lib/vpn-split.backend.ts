@@ -24,7 +24,7 @@ const log = Log.create('vpn-split', Level.INFO);
 export type VpnSplitPortsToPass = 80 | 443 | 22 | 8180 | 8080;
 
 
-const GENERATED = '#GENERATED_BY_NAVI_CLI#';
+const GENERATED = '#GENERATED_BY_CLI#';
 
 const WINDOWS = process.platform === 'win32'
 const EOL = WINDOWS
@@ -395,6 +395,7 @@ const genMsg = `
 function saveHosts(hosts: EtcHosts | HostForServer[], options?: {
   saveHostInUserFolder: boolean
 }) {
+  // console.log({ hosts })
   const { saveHostInUserFolder } = options || {} as any;
   if (_.isArray(hosts)) {
     hosts = hosts.reduce((prev, curr) => {
@@ -405,7 +406,7 @@ function saveHosts(hosts: EtcHosts | HostForServer[], options?: {
   }
   const toSave = parseHost(hosts, saveHostInUserFolder)
   // Object.values(hosts).forEach( c => c )
-  // console.log(toSave)
+  // console.log({ toSave })
   if (saveHostInUserFolder) {
     Helpers.writeFile(HOST_FILE_PATHUSER, toSave);
   } else {
