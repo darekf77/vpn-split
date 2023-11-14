@@ -212,13 +212,15 @@ export class VpnSplit {
   //#region private methods / proxy passthrough
 
   getTarget(req: express.Request, res: express.Response, port: number, hostname: string) {
-    return `${req.protocol}://${hostname}`;
+    // console.log(`protocol="${req.protocol}", hostname="${hostname}", port="${port}"`)
+    return `${req.protocol}://${hostname}:${port}`;
   }
 
   getProxyConfig(req: express.Request, res: express.Response, port: number, hostname?: string) {
     const serverPassthrough = !!hostname;
     const target = this.getTarget(req, res, port, serverPassthrough ? hostname : req.hostname);
-    log.d(`[target] [${serverPassthrough ? 'server' : 'client'}] ${target}, ${hostname}, ${req.protocol}, ${req.ip}, ${req.originalUrl}`)
+    // console.log(`[target] [${serverPassthrough ? 'server' : 'client'}] target="${target}", hostname="${hostname}",`
+    // +` protocol="${req.protocol}", ip="${req.ip}", origin="${req.originalUrl}"`)
     return {
       target,
       ssl: {
