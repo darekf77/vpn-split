@@ -43,7 +43,7 @@
     "vpn-split": "bin/vpn-split",
     "vpn-split-debug": "bin/vpn-split-debug"
   },
-  "version": "16.5.4",
+  "version": "16.5.5",
   "lastBuildTagHash": "79b1a386027aaa657c818997ceb68ead4ba7afba",
   "devDependencies": {
     "@angular-devkit/build-angular": "~16.0.5",
