@@ -21,7 +21,7 @@ const log = Log.create('vpn-split', Level.INFO);
 //#endregion
 
 //#region consts
-export type VpnSplitPortsToPass = 80 | 443 | 22 | 8180 | 8080;
+export type VpnSplitPortsToPass = 80 | 443 | 4443 | 22 | 8180 | 8080;
 
 
 const GENERATED = '#GENERATED_BY_CLI#';
@@ -263,9 +263,14 @@ export class VpnSplit {
     });
   }
 
+  private isHttpsPort(port: number): boolean {
+    port = Number(port);
+    return ((port === 443) || (port === 4443));
+  }
+
   //#region start server passthrough
   private async serverPassthrough(port: VpnSplitPortsToPass) {
-    const isHttps = (port === 443);
+    const isHttps = this.isHttpsPort(port);
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     const app = express();
     const proxy = httpProxy.createProxyServer({});
@@ -319,7 +324,7 @@ export class VpnSplit {
 
   //#region start client passthrough
   private async clientPassthrough(port: VpnSplitPortsToPass, vpnServerTarget: URL) {
-    const isHttps = (port === 443);
+    const isHttps = this.isHttpsPort(port);
     // if (isHttps) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     // }
