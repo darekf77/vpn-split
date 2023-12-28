@@ -104,7 +104,7 @@ export class VpnSplit {
   }
     : { ports?: number[], additionalDefaultHosts?: EtcHosts; cwd?: string; allowNotSudo?: boolean; } = {}) {
 
-    console.log('ports', ports)
+    // console.log('ports', ports)
     // console.log({
     //   allowNotSudo
     // })
@@ -264,8 +264,14 @@ export class VpnSplit {
   }
 
   private isHttpsPort(port: number): boolean {
+    const httpPorts = [
+      443,
+      4443,
+      2222,
+      22,
+    ]
     port = Number(port);
-    return ((port === 443) || (port === 4443));
+    return httpPorts.includes(port);
   }
 
   //#region start server passthrough
