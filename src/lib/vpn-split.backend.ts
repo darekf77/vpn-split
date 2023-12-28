@@ -267,8 +267,8 @@ export class VpnSplit {
     const httpPorts = [
       443,
       4443,
-      2222,
-      22,
+      // 2222,
+      // 22,
     ]
     port = Number(port);
     return httpPorts.includes(port);
