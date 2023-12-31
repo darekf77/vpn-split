@@ -21,8 +21,6 @@ const log = Log.create('vpn-split', Level.INFO);
 //#endregion
 
 //#region consts
-export type VpnSplitPortsToPass = 80 | 443 | 4443 | 22 | 8180 | 8080;
-
 
 const GENERATED = '#GENERATED_BY_CLI#';
 
@@ -97,7 +95,7 @@ export class VpnSplit {
     this.__hostile = new Hostile();
   }
   public static async Instance({
-    ports = [80, 443, 22, 8180, 8080],
+    ports = [80, 443, 4443, 22, 2222, 8180, 8080, 4407, 7999],
     additionalDefaultHosts = {},
     cwd = process.cwd(),
     allowNotSudo = false
@@ -142,23 +140,42 @@ export class VpnSplit {
   //#endregion
 
   //#region start client
-  public async startClient(vpnServerTarget: URL, saveHostInUserFolder = false) {
-    this.preventBadTargetForClient(vpnServerTarget);
+  public async startClient(vpnServerTargets: URL[] | URL, saveHostInUserFolder = false) {
+    if (!Array.isArray(vpnServerTargets)) {
+      vpnServerTargets = [vpnServerTargets];
+    }
+    for (const vpnServerTarget of vpnServerTargets) {
+      this.preventBadTargetForClient(vpnServerTarget);
+    }
+
     this.createCertificateIfNotExists();
     //#region modfy clien 80, 443 to local ip of server
-    const hosts = await this.getRemoteHosts(vpnServerTarget)
+    const hosts = [];
+    for (const vpnServerTarget of vpnServerTargets) {
+      const newHosts = await this.getRemoteHosts(vpnServerTarget);
+      for (const host of newHosts) {
+        host.originHostname = vpnServerTarget.hostname;
+        // console.log('host.originHostname' + host.originHostname)
+        hosts.push(host);
+      }
+    }
+    // console.log(hosts);
+    // process.exit(0)
     const originalHosts = this.hostsArr;
     const cloned = _.values([
       ...originalHosts,
       ...hosts.map(h => HostForServer.From({
         aliases: h.alias as any,
-        ipOrDomain: h.ip
+        ipOrDomain: h.ip,
+        originHostname: h.originHostname,
       }, `external host ${h.alias} ${h.ip}`))
     ].map(c => {
-      const copy = c.clone();
+      let copy = c.clone();
       if (!copy.isDefault) {
         copy.ip = `127.0.0.1`;
       }
+      // copy = HostForServer.From(copy);
+      // console.log('cloned host.originHostname' + copy.originHostname)
       return copy;
     }).reduce((prev, curr) => {
 
@@ -169,9 +186,10 @@ export class VpnSplit {
 
     saveHosts(cloned, { saveHostInUserFolder });
     //#endregion
-    for (let index = 0; index < this.portsToPass.length; index++) {
-      const portToPassthrough = this.portsToPass[index];
-      await this.clientPassthrough(portToPassthrough as any, vpnServerTarget);
+    // console.log((cloned as HostForServer[]))
+    // process.exit(0)
+    for (const portToPassthrough of this.portsToPass) {
+      await this.clientPassthrough(portToPassthrough, vpnServerTargets, cloned);
     }
     Helpers.info(`Client activated`)
   }
@@ -187,7 +205,7 @@ export class VpnSplit {
         url,
         method: 'GET',
       }) as any;
-      return response.data as { ip: string; alias: string; }[];
+      return response.data as { ip: string; alias: string; originHostname: string; }[];
     } catch (err) {
       Helpers.error(`Remote server: ${vpnServerTarget.hostname} maybe inactive...`
         + ` nothing to passthrought `, true, true);
@@ -275,7 +293,7 @@ export class VpnSplit {
   }
 
   //#region start server passthrough
-  private async serverPassthrough(port: VpnSplitPortsToPass) {
+  private async serverPassthrough(port: number) {
     const isHttps = this.isHttpsPort(port);
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     const app = express();
@@ -315,7 +333,7 @@ export class VpnSplit {
       cert: fse.readFileSync(this.serveCertPath)
     }, app)) : (new http.Server(app));
 
-    await Helpers.killProcessByPort(port)
+    await Helpers.killProcessByPort(port, { silent: true });
     await (new Promise((resolve, reject) => {
       h.listen(port, () => {
         log.i(`Passthrough ${isHttps ? 'SECURE' : ''} server`
@@ -329,7 +347,36 @@ export class VpnSplit {
   //#endregion
 
   //#region start client passthrough
-  private async clientPassthrough(port: VpnSplitPortsToPass, vpnServerTarget: URL) {
+  private resolveProperTarget(vpnServerTargetsObj: { [originHostname: string]: URL },
+    req: http.IncomingMessage & express.Request,
+    hosts: { [originHostname: string]: string; }
+  ): URL {
+    /**
+     *
+     */
+    const originHostname = hosts[req.hostname];
+    // console.log({
+    //   'req.hostname': req.hostname,
+    //   'originHostname': originHostname
+    // })
+    return vpnServerTargetsObj[originHostname];
+  }
+
+
+  private async clientPassthrough(port: number, vpnServerTargets: URL[], hostsArr: HostForServer[]) {
+    const hosts = hostsArr.reduce((a, b) => {
+      const aliasesObj = {};
+      for (const aliasDomain of b.aliases) {
+        aliasesObj[aliasDomain] = b.originHostname;
+      }
+      return _.merge(a, aliasesObj)
+    }, {});
+    const vpnServerTargetsObj = vpnServerTargets.reduce((a, b) => {
+      return _.merge(a, {
+        [b.hostname]: b,
+      })
+    }, {});
+
     const isHttps = this.isHttpsPort(port);
     // if (isHttps) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -350,7 +397,9 @@ export class VpnSplit {
         res.send(msg);
         next();
       } else {
-        proxy.web(req, res, this.getProxyConfig(req, res, port, vpnServerTarget.hostname), next);
+        proxy.web(req, res, this.getProxyConfig(req, res, port,
+          this.resolveProperTarget(vpnServerTargetsObj, req, hosts).hostname),
+          next);
       }
     });
 
@@ -359,7 +408,7 @@ export class VpnSplit {
       cert: fse.readFileSync(this.serveCertPath)
     }, app)) : (new http.Server(app));
 
-    await Helpers.killProcessByPort(port)
+    await Helpers.killProcessByPort(port, { silent: true })
     await (new Promise((resolve, reject) => {
       h.listen(port, () => {
         log.i(`Passthrough ${isHttps ? 'SECURE' : ''} client`

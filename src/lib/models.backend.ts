@@ -2,7 +2,16 @@ import { _ } from 'tnp-core';
 import { CLI } from 'tnp-cli';
 import { Helpers } from 'tnp-helpers';
 
+/***
+ * @deprecated
+ * use normal objects
+ */
 export type EtcHosts = { [hostName in string]: HostForServer; };
+
+/***
+ * @deprecated
+ * use normal objects
+ */
 export type IEtcHosts = { [hostName in string]: Pick<HostForServer, 'aliases' | 'ipOrDomain'>; };
 
 export interface OptHostForServer {
@@ -11,6 +20,10 @@ export interface OptHostForServer {
   ipOrDomain?: string;
   aliases?: string[];
   isDefault?: boolean;
+  /**
+   * ip from command: vpn-cli 192.168.1.1 192.168.1.2
+   */
+  originHostname?: string;
   name?: string;
   /**
    * if true - ip and domain will output empty string
@@ -24,7 +37,8 @@ export class HostForServer implements OptHostForServer {
   public clone() {
     return HostForServer.From(this);
   }
-  static From(ipOrDomain: string | URL | Pick<OptHostForServer | HostForServer, 'ipOrDomain' | 'aliases'>, name = '', disabled = false): HostForServer {
+
+  static From(ipOrDomain: string | URL | Pick<OptHostForServer | HostForServer, 'ipOrDomain' | 'aliases' | 'originHostname'>, name = '', disabled = false): HostForServer {
     if (!ipOrDomain) {
       return void 0;
     }
@@ -126,6 +140,14 @@ export class HostForServer implements OptHostForServer {
   public set name(v) {
     this._data.name = v;
   }
+
+  public get originHostname() {
+    return this._data.originHostname;
+  }
+  public set originHostname(v) {
+    this._data.originHostname = v;
+  }
+
   public get disabled() {
     return this._data.disabled;
   }
