@@ -14,7 +14,7 @@ import { Helpers } from 'tnp-helpers';
 import { config } from 'tnp-config';
 import { URL } from 'url';
 import { Hostile } from './hostile.backend';
-import { EtcHosts, HostForServer, OptHostForServer } from './models.backend';
+import { EtcHosts, HostForServer, OptHostForServer } from './models';
 import axios from 'axios';
 import { Log, Level } from 'ng2-logger';
 const log = Log.create('vpn-split', Level.INFO);
