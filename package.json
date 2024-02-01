@@ -44,7 +44,7 @@
     "vpn-split-debug": "bin/vpn-split-debug"
   },
   "version": "16.5.13",
-  "lastBuildTagHash": "412301b5e13da0c56fddb030a7b75b8ff23ed2bd",
+  "lastBuildTagHash": "fc5c0fb997e6620785e6f4f2f91752543cf958e4",
   "devDependencies": {
     "@angular-devkit/build-angular": "~16.0.5",
     "@angular-devkit/core": "~16.0.5",
@@ -315,7 +315,7 @@
     "uuid": "8.3.2",
     "validator": "9.2.0",
     "video.js": "8.3.0",
-    "vpn-split": "~16.5.12",
+    "vpn-split": "~16.5.13",
     "watch": "1.0.2",
     "yup": "1.1.1",
     "zone.js": "~0.13.0"
