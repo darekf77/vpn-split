@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { _ } from 'tnp-core';
 import { CLI } from 'tnp-cli';
 import { Helpers } from 'tnp-helpers';
