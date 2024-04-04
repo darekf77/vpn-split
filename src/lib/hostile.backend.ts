@@ -1,7 +1,6 @@
 
 import * as hostile from 'hostile';
-import { CLI } from 'tnp-cli';
-import { net } from 'tnp-core';
+import { chalk, net } from 'tnp-core/src';
 
 export class Hostile {
 
@@ -17,7 +16,7 @@ export class Hostile {
     }
     lines.forEach((item) => {
       if (item.length > 1) {
-        console.log(item[0], CLI.chalk.green(item[1]))
+        console.log(item[0], chalk.green(item[1]))
       } else {
         console.log(item)
       }
@@ -45,7 +44,7 @@ export class Hostile {
     } catch (err) {
       return this.error('Error: ' + err.message + '. Are you running as root?')
     }
-    console.log(CLI.chalk.green('Added ' + host))
+    console.log(chalk.green('Added ' + host))
   }
 
   /**
@@ -66,7 +65,7 @@ export class Hostile {
         } catch (err) {
           return this.error('Error: ' + err.message + '. Are you running as root?')
         }
-        console.log(CLI.chalk.green('Removed ' + host))
+        console.log(chalk.green('Removed ' + host))
       }
     })
   }
@@ -81,7 +80,7 @@ export class Hostile {
     lines.forEach((item) => {
       this.set(item[0], item[1])
     })
-    console.log(CLI.chalk.green('\nAdded %d hosts!'), lines.length)
+    console.log(chalk.green('\nAdded %d hosts!'), lines.length)
   }
 
   /**
@@ -94,7 +93,7 @@ export class Hostile {
     lines.forEach((item) => {
       this.remove(item[1])
     })
-    console.log(CLI.chalk.green('Removed %d hosts!'), lines.length)
+    console.log(chalk.green('Removed %d hosts!'), lines.length)
   }
 
   /**
@@ -116,7 +115,7 @@ export class Hostile {
    * @param {string} message
    */
   error(err) {
-    console.error(CLI.chalk.red(err.message || err))
+    console.error(chalk.red(err.message || err))
     process.exit(-1)
   }
 

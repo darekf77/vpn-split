@@ -1,6 +1,4 @@
-// @ts-nocheck
-import { _ } from 'tnp-core';
-import { CLI } from 'tnp-cli';
+import { _, chalk } from 'tnp-core';
 import { Helpers } from 'tnp-helpers';
 
 /***
@@ -195,7 +193,7 @@ export class HostForServer implements OptHostForServer {
   }
 
   public get nameWithIpOrDomain() {
-    return CLI.chalk.underline(`${this.name} ${this.ipOrDomain}`);
+    return chalk.underline(`${this.name} ${this.ipOrDomain}`);
   }
   toString = () => {
     return `[string version] ${this.nameWithIpOrDomain}`
