@@ -18,6 +18,8 @@ import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models';
 import axios from 'axios';
 import { Log, Level } from 'ng2-logger';
+import https from 'https';
+import * as crypto from 'crypto';
 const log = Log.create('vpn-split', Level.INFO);
 //#endregion
 
@@ -244,16 +246,22 @@ export class VpnSplit {
       target,
       ssl: {
         key: fse.readFileSync(this.serveKeyPath),
-        cert: fse.readFileSync(this.serveCertPath)
+        cert: fse.readFileSync(this.serveCertPath),
       },
+      agent: new https.Agent({
+        // for self signed you could also add
+        // rejectUnauthorized: false,
+        // allow legacy server
+        secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+      }),
       secure: false,
       // followRedirects: true,
       // changeOrigin: true,
     } as httpProxy.ServerOptions
   }
 
-  getNotFoundMsg(req: express.Request, res: express.Response, port: number) {
-    return `hello from here... server passthrough
+  getNotFoundMsg(req: express.Request, res: express.Response, port: number, type: 'client' | 'server') {
+    return `hello from here... server passthrough ${type}
     protocol: ${req.protocol} <br>
     hostname: ${req.hostname} <br>
     originalUrl: ${req.originalUrl} <br>
@@ -319,7 +327,7 @@ export class VpnSplit {
             return { ip: h.ip, alias: Helpers.arrays.from(h.aliases).join(' ') };
           })));
         } else {
-          const msg = this.getNotFoundMsg(req, res, port);
+          const msg = this.getNotFoundMsg(req, res, port, 'server');
           log.d(msg)
           res.send(msg);
         }
@@ -393,8 +401,8 @@ export class VpnSplit {
       this.filterHeaders(req, res);
 
       if (req.hostname === 'localhost') {
-        const msg = this.getNotFoundMsg(req, res, port);
-        log.d(msg)
+        const msg = this.getNotFoundMsg(req, res, port, 'client');
+        // log.d(msg)
         res.send(msg);
         next();
       } else {
