@@ -50,7 +50,7 @@ export class HostForServer implements OptHostForServer {
       }
       return new HostForServer(dataClone);
     }
-    if (_.isString(ipOrDomain)) {
+    if (_.isString(ipOrDomain)) { // @ts-ignore
       const parsed = Helpers.urlParse(ipOrDomain);
       if (parsed) {
         ipOrDomain = parsed;
@@ -58,7 +58,7 @@ export class HostForServer implements OptHostForServer {
     }
 
     if (_.isObject(ipOrDomain) && (ipOrDomain instanceof URL)) {
-      ipOrDomain = ipOrDomain as URL;
+      ipOrDomain = ipOrDomain as URL; // @ts-ignore
       if (Helpers.isValidIp(ipOrDomain?.host)) {
         return new HostForServer({ ip: ipOrDomain.origin, name, disabled });
       } else {
@@ -79,7 +79,7 @@ export class HostForServer implements OptHostForServer {
     }
   }
   constructor(data: OptHostForServer) {
-    if (data?.ipOrDomain) {
+    if (data?.ipOrDomain) { // @ts-ignore
       if (Helpers.isValidIp(data.ipOrDomain)) {
         data.ip = data.ipOrDomain;
       } else {
@@ -95,7 +95,7 @@ export class HostForServer implements OptHostForServer {
     if (!data) {
       data = {};
     }
-    if (_.isString(data?.aliases)) {
+    if (_.isString(data?.aliases)) { // @ts-ignore
       data.aliases = Helpers.strings.splitIfNeed(data.aliases);
     }
     this._data = data;
@@ -177,17 +177,17 @@ export class HostForServer implements OptHostForServer {
     // return res.startsWith('http') ? res : `http://${res}`;
   }
 
-  public get hostname() {
+  public get hostname() { // @ts-ignore
     const h = Helpers.urlParse(this.ipOrFirstAlias, true);
     return h ? h.hostname : void 0;
   }
 
-  public get hostnameFirstAlias() {
+  public get hostnameFirstAlias() { // @ts-ignore
     const h = Helpers.urlParse(this.firstAlias, true);
     return h ? h.hostname : void 0;
   }
 
-  public get hostnameIp() {
+  public get hostnameIp() { // @ts-ignore
     const h = Helpers.urlParse(this.ip);
     return h ? h.hostname : void 0;
   }
