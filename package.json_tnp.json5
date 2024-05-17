@@ -1,28 +1,21 @@
 {
   "resources": [],
-
   "overrided": {
     "linkedFolders": [],
-
     "ignoreDepsPattern": [
       "*"
     ],
-
     "includeAsDev": [],
-
     "includeOnly": [
       "tnp-db",
       "hostile",
       "is-elevated"
     ],
-
     "dependencies": {},
     'npmFixes': [],
   },
-
   'smartContainerBuildTarget': '',
   'linkedRepos': [],
-
   "libReleaseOptions": {
     "nodts": false,
     "obscure": false,
@@ -33,7 +26,6 @@
     'cliBuildIncludeNodeModules': false,
     'cliBuildUglify': false,
   },
-
   'smartContainerTarget': '',
   "type": "isomorphic-lib",
   "version": "v4",
