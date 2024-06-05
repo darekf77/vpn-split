@@ -28,7 +28,7 @@
   },
   "smartContainerTarget": "",
   "type": "isomorphic-lib",
-  "version": "v4",
+  "version": "v16",
   "license": "MIT",
   "private": false,
   "workerPlugins": {},
