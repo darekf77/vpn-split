@@ -423,7 +423,7 @@ export class VpnSplit {
           proxy.web(
             req,
             res,
-            this.getProxyConfig({ req, res, port, isSecure }),
+            this.getProxyConfig({ req, res, port, isHttps }),
             next,
           );
         }
