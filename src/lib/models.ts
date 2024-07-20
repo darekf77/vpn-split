@@ -1,5 +1,5 @@
-import { _, chalk } from 'tnp-core';
-import { Helpers } from 'tnp-helpers';
+import { _, chalk } from 'tnp-core/src';
+import { Helpers } from 'tnp-helpers/src';
 
 /***
  * @deprecated
