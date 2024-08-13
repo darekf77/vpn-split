@@ -1,21 +1,18 @@
 {
   "resources": [],
+
   "overrided": {
     "linkedFolders": [],
-    "ignoreDepsPattern": [
-      "*"
-    ],
+    "ignoreDepsPattern": ["*"],
     "includeAsDev": [],
-    "includeOnly": [
-      "tnp-db",
-      "hostile",
-      "is-elevated"
-    ],
+    "includeOnly": ["tnp-db", "hostile", "is-elevated"],
     "dependencies": {},
-    "npmFixes": [],
+    "npmFixes": []
   },
+
   "smartContainerBuildTarget": "",
   "linkedRepos": [],
+
   "libReleaseOptions": {
     "nodts": false,
     "obscure": false,
@@ -24,12 +21,13 @@
     "cliBuildNoDts": false,
     "cliBuildObscure": false,
     "cliBuildIncludeNodeModules": false,
-    "cliBuildUglify": false,
+    "cliBuildUglify": false
   },
+
   "smartContainerTarget": "",
   "type": "isomorphic-lib",
-  "version": "v16",
+  "version": "v18",
   "license": "MIT",
   "private": false,
-  "workerPlugins": {},
+  "workerPlugins": {}
 }
