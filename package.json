@@ -46,7 +46,7 @@
     "vpn-split": "bin/vpn-split",
     "vpn-split-debug": "bin/vpn-split-debug"
   },
-  "version": "18.0.3",
+  "version": "18.0.4",
   "lastBuildTagHash": "7bc6ac9a5edd0cc72b795e64a88d2d3d5a7531fd",
   "devDependencies": {
     "@angular-builders/custom-webpack": "~18.0.0",
