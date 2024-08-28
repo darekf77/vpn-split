@@ -5,7 +5,7 @@
     "linkedFolders": [],
     "ignoreDepsPattern": ["*"],
     "includeAsDev": [],
-    "includeOnly": ["tnp-db", "hostile", "is-elevated"],
+    "includeOnly": ["tnp-helpers", "hostile", "is-elevated"],
     "dependencies": {},
     "npmFixes": []
   },
