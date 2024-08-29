@@ -53,7 +53,7 @@ export class HostForServer implements OptHostForServer {
     if (_.isString(ipOrDomain)) { // @ts-ignore
       const parsed = Helpers.urlParse(ipOrDomain);
       if (parsed) {
-        ipOrDomain = parsed;
+        ipOrDomain = parsed as any;
       }
     }
 
