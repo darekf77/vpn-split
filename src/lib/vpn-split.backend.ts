@@ -103,7 +103,7 @@ export class VpnSplit {
     this.__hostile = new Hostile();
   }
   public static async Instance({
-    ports = [80, 443, 4443, 22, 2222, 8180, 8080, 4407, 7999],
+    ports = [80, 443, 4443, 22, 2222, 8180, 8080, 4407, 7999, 9443],
     additionalDefaultHosts = {},
     cwd = process.cwd(),
     allowNotSudo = false,
@@ -388,7 +388,7 @@ ${this.getGetRequestInfo(req, res, port, type)}
 
   private isHttpsPort(port: number): boolean {
     const httpPorts = [
-      443, 4443,
+      443, 4443, 9443,
       // 2222,
       // 22,
     ];
