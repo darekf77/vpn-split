@@ -8,7 +8,7 @@ import {
   isElevated,
   crossPlatformPath,
   os,
-} from 'tnp-core';
+} from 'tnp-core/src';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Helpers } from 'tnp-helpers/src';
