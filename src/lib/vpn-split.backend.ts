@@ -19,6 +19,7 @@ import { EtcHosts, HostForServer, OptHostForServer } from './models';
 import axios from 'axios';
 import { Log, Level } from 'ng2-logger/src';
 import * as crypto from 'crypto';
+import * as dgram from 'dgram'; // <-- For UDP sockets
 const log = Log.create('vpn-split', Level.INFO);
 //#endregion
 
@@ -102,6 +103,7 @@ export class VpnSplit {
   ) {
     this.__hostile = new Hostile();
   }
+
   public static async Instance({
     ports = [80, 443, 4443, 22, 2222, 8180, 8080, 4407, 7999, 9443],
     additionalDefaultHosts = {},
@@ -113,11 +115,6 @@ export class VpnSplit {
     cwd?: string;
     allowNotSudo?: boolean;
   } = {}) {
-    // console.log('ports', ports)
-    // console.log({
-    //   allowNotSudo
-    // })
-
     if (!(await isElevated()) && !allowNotSudo) {
       Helpers.error(
         `[vpn-split] Please run this program as sudo (or admin on windows)`,
@@ -140,14 +137,21 @@ export class VpnSplit {
   //#region start server
   async startServer(saveHostInUserFolder = false) {
     this.createCertificateIfNotExists();
-    //#region modify /etc/host 80,443 to redirect to proper server domain/ip
+    //#region modify /etc/host to direct traffic appropriately
     saveHosts(this.hosts, { saveHostInUserFolder });
     //#endregion
-    for (let index = 0; index < this.portsToPass.length; index++) {
-      const portToPassthrough = this.portsToPass[index];
-      await this.serverPassthrough(portToPassthrough as any);
+
+    // Start TCP/HTTPS passthrough
+    for (const portToPassthrough of this.portsToPass) {
+      await this.serverPassthrough(portToPassthrough);
     }
-    Helpers.info(`Activated.`);
+
+    // Start UDP passthrough
+    for (const portToPassthrough of this.portsToPass) {
+      await this.serverUdpPassthrough(portToPassthrough);
+    }
+
+    Helpers.info(`Activated (server).`);
   }
   //#endregion
 
@@ -155,6 +159,11 @@ export class VpnSplit {
   public applyHosts(hosts: EtcHosts) {
     // console.log(hosts);
     saveHosts(hosts);
+  }
+
+  public applyHostsLocal(hosts: EtcHosts) {
+    // console.log(hosts);
+    saveHostsLocal(hosts);
   }
   //#endregion
 
@@ -171,20 +180,25 @@ export class VpnSplit {
     }
 
     this.createCertificateIfNotExists();
-    //#region modfy clien 80, 443 to local ip of server
-    const hosts = [];
+
+    // Get remote host definitions from remote server
+    const hosts: Array<{
+      ip: string;
+      alias: string;
+      originHostname?: string;
+    }> = [];
     for (const vpnServerTarget of vpnServerTargets) {
       const newHosts = await this.getRemoteHosts(vpnServerTarget);
       for (const host of newHosts) {
+        // Mark the original VPN server domain
         host.originHostname = vpnServerTarget.hostname;
-        // console.log('host.originHostname' + host.originHostname)
         hosts.push(host);
       }
     }
-    // console.log(hosts);
-    // process.exit(0)
+
+    // Merge with original, redirecting all non-default entries to 127.0.0.1
     const originalHosts = this.hostsArr;
-    const cloned = _.values(
+    const combinedHostsObj = _.values(
       [
         ...originalHosts,
         ...hosts.map(h =>
@@ -203,8 +217,6 @@ export class VpnSplit {
           if (!copy.isDefault) {
             copy.ip = `127.0.0.1`;
           }
-          // copy = HostForServer.From(copy);
-          // console.log('cloned host.originHostname' + copy.originHostname)
           return copy;
         })
         .reduce((prev, curr) => {
@@ -212,15 +224,28 @@ export class VpnSplit {
             [curr.aliases.join(' ')]: curr,
           });
         }, {}),
-    ) as any;
+    ) as HostForServer[];
 
-    saveHosts(cloned, { saveHostInUserFolder });
-    //#endregion
-    // console.log((cloned as HostForServer[]))
-    // process.exit(0)
+    saveHosts(combinedHostsObj, { saveHostInUserFolder });
+
+    // Start TCP/HTTPS passthrough
     for (const portToPassthrough of this.portsToPass) {
-      await this.clientPassthrough(portToPassthrough, vpnServerTargets, cloned);
+      await this.clientPassthrough(
+        portToPassthrough,
+        vpnServerTargets,
+        combinedHostsObj,
+      );
     }
+
+    // Start UDP passthrough
+    for (const portToPassthrough of this.portsToPass) {
+      await this.clientUdpPassthrough(
+        portToPassthrough,
+        vpnServerTargets,
+        combinedHostsObj,
+      );
+    }
+
     Helpers.info(`Client activated`);
   }
   //#endregion
@@ -229,19 +254,15 @@ export class VpnSplit {
   private async getRemoteHosts(vpnServerTarget: URL) {
     try {
       const url = `http://${vpnServerTarget.hostname}${SERVERS_PATH}`;
-      const response = (await axios({
-        url,
-        method: 'GET',
-      })) as any;
+      const response = await axios({ url, method: 'GET' });
       return response.data as {
         ip: string;
         alias: string;
-        originHostname: string;
+        originHostname?: string;
       }[];
     } catch (err) {
       Helpers.error(
-        `Remote server: ${vpnServerTarget.hostname} maybe inactive...` +
-          ` nothing to passthrought `,
+        `Remote server: ${vpnServerTarget.hostname} may be inactive...`,
         true,
         true,
       );
@@ -257,20 +278,16 @@ export class VpnSplit {
       !Helpers.exists(this.serveCertPath)
     ) {
       Helpers.info(
-        `[vpn-split] Generating new certification for localhost... please follow instructions..`,
+        `[vpn-split] Generating new self-signed certificate for localhost...`,
       );
       const commandGen = `openssl req -nodes -new -x509 -keyout ${this.serveKeyName} -out ${this.serveCertName}`;
       Helpers.run(commandGen, { cwd: this.cwd, output: true }).sync();
-
-      // Helpers.run(`openssl verify -verbose -x509_strict -CAfile ${this.serveKeyName} ${this.serveCertChainName}`,
-      //   { cwd: this.cwd, output: true }).sync()
     }
   }
   //#endregion
 
-  //#region private methods / proxy passthrough
-
-  getTarget({
+  //#region private methods / TCP & HTTPS passthrough
+  private getTarget({
     req,
     res,
     port,
@@ -281,11 +298,10 @@ export class VpnSplit {
     port: number;
     hostname: string;
   }): string {
-    // console.log(`protocol="${req.protocol}", hostname="${hostname}", port="${port}"`)
     return `${req.protocol}://${hostname}:${port}`;
   }
 
-  getProxyConfig({
+  private getProxyConfig({
     req,
     res,
     port,
@@ -305,8 +321,13 @@ export class VpnSplit {
       port,
       hostname: serverPassthrough ? hostname : req.hostname,
     });
-    // console.log(`[target] [${serverPassthrough ? 'server' : 'client'}] target="${target}", hostname="${hostname}",`
-    // +` protocol="${req.protocol}", ip="${req.ip}", origin="${req.originalUrl}"`)
+    // console.log({
+    //   target,
+    //   port,
+    //   hostname,
+    //   reqHostname: req.hostname,
+    //   serverPassthrough,
+    // });
     return isHttps
       ? {
           target,
@@ -315,88 +336,64 @@ export class VpnSplit {
             cert: fse.readFileSync(this.serveCertPath),
           },
           agent: new https.Agent({
-            // for self signed you could also add
-            // rejectUnauthorized: false,
-            // allow legacy server
             secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
           }),
           secure: false,
-          // followRedirects: true,
-          // changeOrigin: true,
         }
-      : ({
-          target,
-        } as httpProxy.ServerOptions);
+      : ({ target } as httpProxy.ServerOptions);
   }
 
-  private getGetRequestInfo(
+  private getNotFoundMsg(
     req: express.Request,
     res: express.Response,
     port: number,
     type: 'client' | 'server',
   ): string {
-    return `server passthrough type: ${type}
-protocol: ${req.protocol} <br>
-hostname: ${req.hostname} <br>
-originalUrl: ${req.originalUrl} <br>
-req.method ${req.method} <br>
-port: ${port} <br>
-SERVERS_PATH ${SERVERS_PATH} <br>`;
+    return `[vpn-split] You are requesting a URL that is not in proxy reach [${type}]
+Protocol: ${req.protocol}
+Hostname: ${req.hostname}
+OriginalUrl: ${req.originalUrl}
+Req.method: ${req.method}
+Port: ${port}
+SERVERS_PATH: ${SERVERS_PATH}`;
   }
 
-  getNotFoundMsg(
+  private getMaybeChangeOriginTrueMsg(
     req: express.Request,
     res: express.Response,
     port: number,
     type: 'client' | 'server',
   ): string {
-    return `[vpn-split] You are requesting url that is not in proxy reach ${type}
-${this.getGetRequestInfo(req, res, port, type)}
-    `;
+    return `[vpn-split] Possibly need changeOrigin: true in your proxy config
+Protocol: ${req.protocol}
+Hostname: ${req.hostname}
+OriginalUrl: ${req.originalUrl}
+Req.method: ${req.method}
+Port: ${port}`;
   }
 
-  getMaybeChangeOriginTrueMs(
-    req: express.Request,
-    res: express.Response,
-    port: number,
-    type: 'client' | 'server',
-  ): string {
-    return `[vpn-split] maybe changeOrigin: true, in your porxy config ?
-${this.getGetRequestInfo(req, res, port, type)}
-    `;
-  }
-
-  get headersToRemove() {
-    return [
-      // 'Strict-Transport-Security',
-      // 'upgrade-insecure-requests',
-      // 'Content-Security-Policy',
-      // 'Upgrade-Insecure-Requests',
-      // 'content-security-policy',
-    ];
-  }
-
-  filterHeaders(
+  private filterHeaders(
     req: http.IncomingMessage & express.Request,
     res: http.ServerResponse & express.Response,
   ): void {
-    this.headersToRemove.forEach(headerName => {
+    // If you have any headers to remove, do it here:
+    const headersToRemove = [
+      // 'Strict-Transport-Security',
+      // 'Content-Security-Policy',
+      // ...
+    ];
+    headersToRemove.forEach(headerName => {
       delete req.headers[headerName];
       res.setHeader(headerName, '');
     });
   }
 
   private isHttpsPort(port: number): boolean {
-    const httpPorts = [
-      443, 4443, 9443,
-      // 2222,
-      // 22,
-    ];
-    port = Number(port);
-    return httpPorts.includes(port);
+    // Decide your logic for “is HTTPS” here
+    return [443, 4443, 9443].includes(port);
   }
 
-  //#region start server passthrough
+  //#region server passthrough (TCP/HTTPS)
   private async serverPassthrough(portToPassthrough: number): Promise<void> {
     const isHttps = this.isHttpsPort(portToPassthrough);
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -405,11 +402,8 @@ ${this.getGetRequestInfo(req, res, port, type)}
     const currentLocalIps = [
       'localhost',
       '127.0.0.1',
-      // '0.0.0.0',
       ...Helpers.allLocalIpAddresses().map(a => a.hostname),
     ];
-
-    // console.log({ currentLocalIps });
 
     app.use(
       (
@@ -423,12 +417,10 @@ ${this.getGetRequestInfo(req, res, port, type)}
           if (req.method === 'GET' && req.originalUrl === SERVERS_PATH) {
             res.send(
               JSON.stringify(
-                this.hostsArrWithoutDefault.map(h => {
-                  return {
-                    ip: h.ip,
-                    alias: Helpers.arrays.from(h.aliases).join(' '),
-                  };
-                }),
+                this.hostsArrWithoutDefault.map(h => ({
+                  ip: h.ip,
+                  alias: Helpers.arrays.from(h.aliases).join(' '),
+                })),
               ),
             );
           } else {
@@ -453,75 +445,53 @@ ${this.getGetRequestInfo(req, res, port, type)}
       },
     );
 
-    const h = isHttps
-      ? new https.Server(
+    const server = isHttps
+      ? https.createServer(
           {
             key: fse.readFileSync(this.serveKeyPath),
             cert: fse.readFileSync(this.serveCertPath),
           },
           app,
         )
-      : new http.Server(app);
+      : http.createServer(app);
 
     await Helpers.killProcessByPort(portToPassthrough, { silent: true });
-    await new Promise((resolve, reject) => {
-      h.listen(portToPassthrough, () => {
+    await new Promise<void>((resolve, reject) => {
+      server.listen(portToPassthrough, () => {
         console.log(
-          `Passthrough ${isHttps ? 'SECURE' : 'UNSECURE'} server` +
-            ` listening on port: ${portToPassthrough}
-        env: ${app.settings.env}
-          `,
+          `TCP/HTTPS server listening on port ${portToPassthrough} (secure=${isHttps})`,
         );
+        resolve();
       });
-      resolve(void 0);
     });
   }
   //#endregion
 
-  //#region start client passthrough
-  private resolveProperTarget(
-    vpnServerTargetsObj: { [originHostname: string]: URL },
-    req: http.IncomingMessage & express.Request,
-    hosts: { [originHostname: string]: string },
-  ): URL {
-    /**
-     *
-     */
-    const originHostname = hosts[req.hostname];
-    // console.log({
-    //   'req.hostname': req.hostname,
-    //   'originHostname': originHostname
-    // })
-    return vpnServerTargetsObj[originHostname];
-  }
-
+  //#region client passthrough (TCP/HTTPS)
   private async clientPassthrough(
     portToPassthrough: number,
     vpnServerTargets: URL[],
     hostsArr: HostForServer[],
   ) {
-    const hosts = hostsArr.reduce((a, b) => {
-      const aliasesObj = {};
-      for (const aliasDomain of b.aliases) {
-        aliasesObj[aliasDomain] = b.originHostname;
+    // Map from an alias => the “real” origin hostname (the server domain)
+    const aliasToOriginHostname: { [alias: string]: string | undefined } = {};
+    for (const h of hostsArr) {
+      for (const alias of h.aliases) {
+        aliasToOriginHostname[alias] = h.originHostname;
       }
-      return _.merge(a, aliasesObj);
-    }, {});
+    }
+    // Remove defaults from the map so we don't cause collisions
+    delete aliasToOriginHostname['localhost'];
+    delete aliasToOriginHostname['broadcasthost'];
 
-    const vpnServerTargetsObj = vpnServerTargets.reduce((a, b) => {
-      return _.merge(a, {
-        [b.hostname]: b,
-      });
-    }, {});
-
-    delete hosts['localhost'];
-    delete hosts['broadcasthost'];
-    // console.log({ vpnServerTargetsObj });
+    // Build a dictionary from originHostname => URL (for quick lookup)
+    const originToUrlMap: { [origin: string]: URL } = {};
+    for (const url of vpnServerTargets) {
+      originToUrlMap[url.hostname] = url;
+    }
 
     const isHttps = this.isHttpsPort(portToPassthrough);
-    // if (isHttps) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-    // }
     const app = express();
     const proxy = httpProxy.createProxyServer({});
 
@@ -531,99 +501,225 @@ ${this.getGetRequestInfo(req, res, port, type)}
         res: http.ServerResponse & express.Response,
         next,
       ) => {
-        // console.log('req', req  );
         this.filterHeaders(req, res);
-        const port = this.getPortFromRequest(req);
 
-        if (req.hostname === 'localhost') {
-          if (this.portsToPass.includes(port)) {
-            const msg = this.getNotFoundMsg(
-              req,
-              res,
-              portToPassthrough,
-              'client',
-            );
-            // log.d(msg)
-            res.send(msg);
-          } else {
-            const msg = this.getMaybeChangeOriginTrueMs(
-              req,
-              res,
-              portToPassthrough,
-              'client',
-            );
-            // log.d(msg)
-            res.send(msg);
-          }
-          next();
-        } else {
-          proxy.web(
+        // Identify the real origin server based on alias
+        const originHostname = aliasToOriginHostname[req.hostname];
+        if (!originHostname) {
+          // Not one of our known aliases
+          const msg = this.getMaybeChangeOriginTrueMsg(
             req,
             res,
-            this.getProxyConfig({
-              req,
-              res,
-              port: portToPassthrough,
-              isHttps,
-              hostname: this.resolveProperTarget(
-                vpnServerTargetsObj,
-                req,
-                hosts,
-              ).hostname,
-            }),
-            next,
+            portToPassthrough,
+            'client',
           );
+          res.send(msg);
+          next();
+          return;
         }
+
+        // Proxy onward to the real server domain at the same port
+        const targetUrlObj = originToUrlMap[originHostname];
+        if (!targetUrlObj) {
+          const notFoundMsg = this.getNotFoundMsg(
+            req,
+            res,
+            portToPassthrough,
+            'client',
+          );
+          res.send(notFoundMsg);
+          next();
+          return;
+        }
+
+        // Forward
+        proxy.web(
+          req,
+          res,
+          this.getProxyConfig({
+            req,
+            res,
+            port: portToPassthrough,
+            isHttps,
+            hostname: targetUrlObj.hostname,
+          }),
+          next,
+        );
       },
     );
 
-    const h = isHttps
-      ? new https.Server(
+    const server = isHttps
+      ? https.createServer(
           {
             key: fse.readFileSync(this.serveKeyPath),
             cert: fse.readFileSync(this.serveCertPath),
           },
           app,
         )
-      : new http.Server(app);
+      : http.createServer(app);
 
     await Helpers.killProcessByPort(portToPassthrough, { silent: true });
-    await new Promise((resolve, reject) => {
-      h.listen(portToPassthrough, () => {
+    await new Promise<void>((resolve, reject) => {
+      server.listen(portToPassthrough, () => {
         log.i(
-          `Passthrough ${isHttps ? 'SECURE' : ''} client` +
-            ` listening on port: ${portToPassthrough}
-        env: ${app.settings.env}
-          `,
+          `TCP/HTTPS client listening on port ${portToPassthrough} (secure=${isHttps})`,
         );
+        resolve();
       });
-      resolve(void 0);
     });
   }
   //#endregion
 
+  //#region UDP passthrough
+  /**
+   * Start a UDP socket for “server” mode on a given port.
+   * This example forwards inbound messages right back to the sender,
+   * or you can forward them to an external IP:port if desired.
+   */
+  private async serverUdpPassthrough(port: number): Promise<void> {
+    // Example of a simple “echo-style” server or forwarder
+    const socket = dgram.createSocket('udp4');
+
+    // (Optionally) kill existing processes on that port – though for UDP
+    // we might not have a direct “listener process.” Adjust as needed.
+    await Helpers.killProcessByPort(port, { silent: true }).catch(() => {});
+
+    socket.on('message', (msg, rinfo) => {
+      // rinfo contains { address, port } of the sender
+      // In a typical “server” scenario, you might:
+      // 1. Inspect msg
+      // 2. Possibly forward to some real backend if needed
+      // 3. Or just echo it back
+
+      // For a real forward, do something like:
+      // const backendHost = 'some-other-host-or-ip';
+      // const backendPort = 9999;
+      // socket.send(msg, 0, msg.length, backendPort, backendHost);
+
+      // For a basic echo server:
+      socket.send(msg, 0, msg.length, rinfo.port, rinfo.address, err => {
+        if (err) {
+          log.er(`UDP server send error: ${err}`);
+        }
+      });
+    });
+
+    socket.on('listening', () => {
+      const address = socket.address();
+      log.i(`UDP server listening at ${address.address}:${address.port}`);
+    });
+
+    socket.bind(port);
+  }
+
+  /**
+   * Start a UDP socket for “client” mode on a given port.
+   * This example also just does a trivial pass-through or echo,
+   * but you can adapt to forward to a remote server.
+   */
+  private async clientUdpPassthrough(
+    port: number,
+    vpnServerTargets: URL[],
+    hostsArr: HostForServer[],
+  ): Promise<void> {
+    // In client mode, we typically intercept local UDP traffic on “port”
+    // and forward it to the remote server. Then we forward the remote
+    // server's response back to the local client.
+
+    const socket = dgram.createSocket('udp4');
+    await Helpers.killProcessByPort(port, { silent: true }).catch(() => {});
+
+    // For simplicity, pick the first server from the array
+    // Or add your own logic to choose among multiple.
+    const primaryTarget = vpnServerTargets[0];
+    const targetHost = primaryTarget.hostname;
+    // Choose the same port or a custom port
+    const targetPort = port;
+
+    // A map to remember who originally sent us a packet,
+    // so we can route the response back properly.
+    // Key could be “targetHost:targetPort => { address, port }”
+    // or “clientAddress:clientPort” => { remoteAddress, remotePort }.
+    // Adapt to your scenario.
+    const clientMap = new Map<string, dgram.RemoteInfo>();
+
+    socket.on('message', (msg, rinfo) => {
+      //
+      // If the message is from a local client, forward to server.
+      // If the message is from the server, forward back to the correct client.
+      //
+
+      // Check if it’s from local or remote by address. This is simplistic:
+      const isFromLocal = !_.includes(
+        hostsArr.map(h => h.ipOrDomain),
+        rinfo.address,
+      );
+
+      if (isFromLocal) {
+        // Received from local => forward to “server” (the VPN server)
+        // Keep track of who we got this from (the local client)
+        const key = `local-${rinfo.address}:${rinfo.port}`;
+        clientMap.set(key, rinfo);
+
+        // Forward to remote
+        socket.send(msg, 0, msg.length, targetPort, targetHost, err => {
+          if (err) {
+            log.er(`UDP client forward error: ${err}`);
+          }
+        });
+      } else {
+        // Probably from remote => forward back to whichever local client sent it
+        // In a more advanced scenario, parse the payload or maintain a bigger table
+        // with NAT-like sessions.
+        //
+        // For now, we guess it’s from the “VPN server”
+        // We'll just route it back to the single local client that we stored
+        // or do multiple if we had a better NAT map.
+
+        // If you have multi-target or multi-client logic, adapt here.
+        // For example, search clientMap by something in the msg or a NAT key.
+        clientMap.forEach((localRinfo, key) => {
+          socket.send(
+            msg,
+            0,
+            msg.length,
+            localRinfo.port,
+            localRinfo.address,
+            err => {
+              if (err) {
+                log.er(`UDP client re-send error: ${err}`);
+              }
+            },
+          );
+        });
+      }
+    });
+
+    socket.on('listening', () => {
+      const address = socket.address();
+      log.i(
+        `UDP client listening at ${address.address}:${address.port}, forwarding to ${targetHost}:${targetPort}`,
+      );
+    });
+
+    socket.bind(port);
+  }
   //#endregion
 
   //#region private methods / get port from request
   private getPortFromRequest(req: express.Request): number {
     const host = req.headers.host;
     const protocol = req.protocol;
-    let port: number | string;
     if (host) {
       const hostParts = host.split(':');
       if (hostParts.length === 2) {
-        port = hostParts[1];
+        return Number(hostParts[1]);
       } else {
-        // Default ports based on protocol
-        port = protocol === 'https' ? '443' : '80';
+        return protocol === 'https' ? 443 : 80;
       }
-    } else {
-      // Default to port 80 if no host header is present (uncommon)
-      port = '80';
     }
-    return Number(port);
+    return 80;
   }
-
   //#endregion
 
   //#region private methods / prevent bad target for client
@@ -631,21 +727,15 @@ ${this.getGetRequestInfo(req, res, port, type)}
     if (!vpnServerTarget) {
       const currentLocalIp = Helpers.localIpAddress();
       Helpers.error(
-        `[vpn-server] Please provide (correct?) target server
-      Example:
-      vpn-server ${currentLocalIp} # or whatever ip of your machine with vpn
-
-      # your local ip is: ${currentLocalIp}
-
-      your args:
-      ${process.argv.slice(2).join(', ')}
-      `,
+        `[vpn-server] Please provide a correct target server.\n` +
+          `Example:\n` +
+          `vpn-server ${currentLocalIp}\n\n` +
+          `Your local IP is: ${currentLocalIp}`,
         false,
         true,
       );
     }
   }
-
   //#endregion
 }
 
@@ -662,11 +752,10 @@ const genMsg =
 function saveHosts(
   hosts: EtcHosts | HostForServer[],
   options?: {
-    saveHostInUserFolder: boolean;
+    saveHostInUserFolder?: boolean;
   },
 ) {
-  // console.log({ hosts })
-  const { saveHostInUserFolder } = options || ({} as any);
+  const { saveHostInUserFolder } = options || {};
   if (_.isArray(hosts)) {
     hosts = hosts.reduce((prev, curr) => {
       return _.merge(prev, {
@@ -674,9 +763,29 @@ function saveHosts(
       });
     }, {} as EtcHosts);
   }
-  const toSave = parseHost(hosts, saveHostInUserFolder);
-  // Object.values(hosts).forEach( c => c )
-  // console.log({ toSave })
+  const toSave = parseHost(hosts, !!saveHostInUserFolder);
+  if (saveHostInUserFolder) {
+    Helpers.writeFile(HOST_FILE_PATHUSER, toSave);
+  } else {
+    Helpers.writeFile(HOST_FILE_PATH, toSave);
+  }
+}
+
+function saveHostsLocal(
+  hosts: EtcHosts | HostForServer[],
+  options?: {
+    saveHostInUserFolder?: boolean;
+  },
+) {
+  const { saveHostInUserFolder } = options || {};
+  if (_.isArray(hosts)) {
+    hosts = hosts.reduce((prev, curr) => {
+      return _.merge(prev, {
+        [curr.name]: curr,
+      });
+    }, {} as EtcHosts);
+  }
+  const toSave = parseHost(hosts, !!saveHostInUserFolder, true);
   if (saveHostInUserFolder) {
     Helpers.writeFile(HOST_FILE_PATHUSER, toSave);
   } else {
@@ -688,11 +797,9 @@ function saveHosts(
 //#region helpers / parse hosts
 function parseHost(
   hosts: EtcHosts,
-  options: {
-    saveHostInUserFolder: boolean;
-  },
+  saveHostInUserFolder: boolean,
+  useLocal = false,
 ) {
-  const { saveHostInUserFolder } = options || ({} as any);
   _.keys(hosts).forEach(hostName => {
     const v = hosts[hostName] as HostForServer;
     v.name = hostName;
@@ -703,13 +810,16 @@ function parseHost(
     _.keys(hosts)
       .map(hostName => {
         const v = hosts[hostName] as HostForServer;
+        const aliasesStr = (v.aliases as string[]).join(' ');
         if (saveHostInUserFolder) {
-          return `${v.disabled ? '#' : ''}${v.ipOrDomain} ${(v.aliases as string[]).join(' ')}`;
+          // For a user-specific hosts file:
+          return useLocal
+            ? `127.0.0.1 ${aliasesStr}`
+            : `${v.disabled ? '#' : ''}${v.ipOrDomain} ${aliasesStr}`;
         }
-        return (
-          `${v.disabled ? '#' : ''}${v.ipOrDomain} ${(v.aliases as string[]).join(' ')}` +
-          ` # ${v.name} ${GENERATED}`
-        );
+        return useLocal
+          ? `127.0.0.1 ${aliasesStr}`
+          : `${v.disabled ? '#' : ''}${v.ipOrDomain} ${aliasesStr} # ${v.name} ${GENERATED}`;
       })
       .join(EOL) +
     EOL +
