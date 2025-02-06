@@ -577,12 +577,13 @@ Port: ${port}`;
    * or you can forward them to an external IP:port if desired.
    */
   private async serverUdpPassthrough(port: number): Promise<void> {
+    return;
     // Example of a simple “echo-style” server or forwarder
     const socket = dgram.createSocket('udp4');
 
     // (Optionally) kill existing processes on that port – though for UDP
     // we might not have a direct “listener process.” Adjust as needed.
-    await Helpers.killProcessByPort(port, { silent: true }).catch(() => {});
+    // await Helpers.killProcessByPort(port, { silent: true }).catch(() => {});
 
     socket.on('message', (msg, rinfo) => {
       // rinfo contains { address, port } of the sender
@@ -622,12 +623,14 @@ Port: ${port}`;
     vpnServerTargets: URL[],
     hostsArr: HostForServer[],
   ): Promise<void> {
+    return;
+    // console.log(`Client UDP passthrough, port ${port}` );
     // In client mode, we typically intercept local UDP traffic on “port”
     // and forward it to the remote server. Then we forward the remote
     // server's response back to the local client.
 
     const socket = dgram.createSocket('udp4');
-    await Helpers.killProcessByPort(port, { silent: true }).catch(() => {});
+    // await Helpers.killProcessByPort(port, { silent: true }).catch(() => {});
 
     // For simplicity, pick the first server from the array
     // Or add your own logic to choose among multiple.
