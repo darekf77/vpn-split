@@ -3,12 +3,12 @@ import {
   _,
   path,
   fse,
-  http,
   https,
   isElevated,
   crossPlatformPath,
   os,
 } from 'tnp-core/src';
+import * as http from 'http';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Helpers } from 'tnp-helpers/src';
