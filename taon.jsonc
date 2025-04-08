@@ -1,33 +1,16 @@
 {
-  "resources": [],
-
-  "overrided": {
-    "linkedFolders": [],
-    "ignoreDepsPattern": ["*"],
-    "includeAsDev": [],
-    "includeOnly": ["tnp-helpers", "hostile", "is-elevated"],
-    "dependencies": {},
-    "npmFixes": []
-  },
-
-  "smartContainerBuildTarget": "",
-  "linkedRepos": [],
-
-  "libReleaseOptions": {
-    "nodts": false,
-    "obscure": false,
-    "ugly": false,
-    "includeNodeModules": false,
-    "cliBuildNoDts": false,
-    "cliBuildObscure": false,
-    "cliBuildIncludeNodeModules": false,
-    "cliBuildUglify": false
-  },
-
-  "smartContainerTarget": "",
   "type": "isomorphic-lib",
   "version": "v18",
-  "license": "MIT",
-  "private": false,
-  "workerPlugins": {}
+  "dependenciesNamesForNpmLib": ["tnp-helpers", "hostile", "is-elevated"],
+
+  "autoReleaseConfigAllowedItems": [{
+    "artifactName": "npm-lib-and-cli-tool"
+  }],
+
+  "resources": [],
+
+  "packageJsonOverride": {
+    "license": "MIT",
+    "private": false
+  }
 }
