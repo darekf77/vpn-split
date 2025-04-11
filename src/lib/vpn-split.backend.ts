@@ -1,4 +1,15 @@
 //#region imports
+import * as crypto from 'crypto';
+import * as dgram from 'dgram'; // <-- For UDP sockets
+import * as http from 'http';
+import { URL } from 'url';
+
+import axios from 'axios';
+import * as express from 'express';
+import * as httpProxy from 'http-proxy';
+import { Log, Level } from 'ng2-logger/src';
+import { config, HOST_FILE_PATH } from 'tnp-config/src';
+import { Utils } from 'tnp-core';
 import {
   _,
   path,
@@ -7,19 +18,14 @@ import {
   isElevated,
   crossPlatformPath,
   os,
+  UtilsOs,
 } from 'tnp-core/src';
-import * as http from 'http';
-import * as express from 'express';
-import * as httpProxy from 'http-proxy';
 import { Helpers } from 'tnp-helpers/src';
-import { config, HOST_FILE_PATH } from 'tnp-config/src';
-import { URL } from 'url';
+
+
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models';
-import axios from 'axios';
-import { Log, Level } from 'ng2-logger/src';
-import * as crypto from 'crypto';
-import * as dgram from 'dgram'; // <-- For UDP sockets
+
 const log = Log.create('vpn-split', Level.INFO);
 //#endregion
 
@@ -280,7 +286,9 @@ export class VpnSplit {
       Helpers.info(
         `[vpn-split] Generating new self-signed certificate for localhost...`,
       );
-      const commandGen = `openssl req -nodes -new -x509 -keyout ${this.serveKeyName} -out ${this.serveCertName}`;
+      const commandGen = UtilsOs.isRunningInWindowsPowerShell()
+        ? `powershell -Command "& 'C:\\Program Files\\Git\\usr\\bin\\openssl.exe' req -nodes -new -x509 -keyout ${this.serveKeyName} -out ${this.serveCertName}"`
+        : `openssl req -nodes -new -x509 -keyout ${this.serveKeyName} -out ${this.serveCertName}`;
       Helpers.run(commandGen, { cwd: this.cwd, output: true }).sync();
     }
   }
