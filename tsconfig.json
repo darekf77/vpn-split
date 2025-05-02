@@ -4,10 +4,16 @@
     "strictNullChecks": false,
     "rootDir": "./src",
     "paths": {
-      "vpn-split": [
+      "@lib": [
         "./src/lib"
       ],
-      "vpn-split/*": [
+      "@lib/*": [
+        "./src/lib/*"
+      ],
+      "vpn-split/src": [
+        "./src/lib"
+      ],
+      "vpn-split/src/*": [
         "./src/lib/*"
       ]
     }
