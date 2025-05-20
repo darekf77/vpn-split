@@ -1,6 +1,6 @@
 {
   "name": "vpn-split",
-  "version": "19.0.12",
+  "version": "19.0.13",
   "license": "MIT",
   "author": "Dariusz Filipiak",
   "private": false,
@@ -326,6 +326,7 @@
     "yup": "~1.0.0-beta.8",
     "zone.js": "~0.13.0"
   },
+  "main": "dist/app.electron.js",
   "bin": {
     "vpn-split": "bin/vpn-split",
     "vpn-split-debug": "bin/vpn-split-debug"
