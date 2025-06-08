@@ -12,9 +12,9 @@
 
   "packageJsonOverride": {
     "author": "Dariusz Filipiak",
+    "description": "Description for vpn-split. Hello world!",
     "license": "MIT",
     "private": false,
-    "scripts": {},
-    "description": "Description for vpn-split. Hello world!"
+    "scripts": {}
   }
 }
