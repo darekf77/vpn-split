@@ -2,6 +2,7 @@
   "type": "isomorphic-lib",
   "version": "v19",
   "dependenciesNamesForNpmLib": ["tnp-helpers", "hostile", "is-elevated"],
+  "appId": "com.domain.example.vpn-split",
 
   "autoReleaseConfigAllowedItems": [{
     "artifactName": "npm-lib-and-cli-tool"
@@ -13,7 +14,7 @@
     "author": "Dariusz Filipiak",
     "license": "MIT",
     "private": false,
-
-    "scripts": {}
+    "scripts": {},
+    "description": "Description for vpn-split. Hello world!"
   }
 }
