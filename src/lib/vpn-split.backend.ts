@@ -9,7 +9,6 @@ import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Log, Level } from 'ng2-logger/src';
 import { config, HOST_FILE_PATH } from 'tnp-config/src';
-import { Utils } from 'tnp-core';
 import {
   _,
   path,
@@ -21,7 +20,6 @@ import {
   UtilsOs,
 } from 'tnp-core/src';
 import { Helpers } from 'tnp-helpers/src';
-
 
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models';
@@ -821,6 +819,13 @@ function parseHost(
     _.keys(hosts)
       .map(hostName => {
         const v = hosts[hostName] as HostForServer;
+
+        if (v.skipUpdateOfServerEtcHosts) {
+          console.warn(
+            `[vpn-split] Skip saving host: ${v.name} (${v.ipOrDomain})`,
+          );
+          return `# SKIPPING HOST ${v.ipOrDomain} ${v.aliases.join(' ')} ${GENERATED}`; // Skip saving this host
+        }
         const aliasesStr = (v.aliases as string[]).join(' ');
         if (saveHostInUserFolder) {
           // For a user-specific hosts file:

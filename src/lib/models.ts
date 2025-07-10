@@ -23,6 +23,7 @@ export interface OptHostForServer {
   ipOrDomain?: string;
   environmentName?: string;
   aliases?: string[];
+  skipUpdateOfServerEtcHosts?: boolean;
   isDefault?: boolean;
   /**
    * ip from command: vpn-cli 192.168.1.1 192.168.1.2
@@ -48,7 +49,7 @@ export class HostForServer implements OptHostForServer {
       | URL
       | Pick<
           OptHostForServer | HostForServer,
-          'ipOrDomain' | 'aliases' | 'originHostname'
+          'ipOrDomain' | 'aliases' | 'originHostname' | 'skipUpdateOfServerEtcHosts'
         >,
     name = '',
     disabled = false,
@@ -180,6 +181,15 @@ export class HostForServer implements OptHostForServer {
   public get environmentName() {
     return this._data.environmentName || '';
   }
+
+  public get skipUpdateOfServerEtcHosts() {
+    return this._data.skipUpdateOfServerEtcHosts || false;
+  }
+
+  public set skipUpdateOfServerEtcHosts(v) {
+    this._data.skipUpdateOfServerEtcHosts = v;
+  }
+
   public get ipOrDomain() {
     if (this.disabled) {
       return '';

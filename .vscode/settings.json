@@ -164,5 +164,9 @@
   ],
   "files.watcherExclude": {
     "local_release/**": true
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false
   }
 }
