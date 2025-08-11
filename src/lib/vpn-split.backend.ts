@@ -1,5 +1,6 @@
 //#region imports
 import * as crypto from 'crypto';
+// TODO I am using TCP ugrade not UDP!
 import * as dgram from 'dgram'; // <-- For UDP sockets
 import * as http from 'http';
 import { URL } from 'url';
@@ -8,7 +9,7 @@ import axios from 'axios';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Log, Level } from 'ng2-logger/src';
-import { config, HOST_FILE_PATH } from 'tnp-config/src';
+import { config } from 'tnp-config/src';
 import {
   _,
   path,
@@ -18,11 +19,13 @@ import {
   crossPlatformPath,
   os,
   UtilsOs,
+  UtilsNetwork,
 } from 'tnp-core/src';
 import { Helpers } from 'tnp-helpers/src';
 
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models';
+const HOST_FILE_PATH = UtilsNetwork.getEtcHostsPath();
 
 const log = Log.create('vpn-split', Level.INFO);
 //#endregion
@@ -36,7 +39,7 @@ const EOL = process.platform === 'win32' ? '\r\n' : '\n';
 const SERVERS_PATH = '/$$$$servers$$$$';
 
 const HOST_FILE_PATHUSER = crossPlatformPath([
-  os.userInfo().homedir,
+  UtilsOs.getRealHomeDir(),
   'hosts-file__vpn-split',
 ]);
 

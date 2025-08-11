@@ -1,4 +1,4 @@
-import { _, chalk } from 'tnp-core/src';
+import { _, chalk, UtilsNetwork } from 'tnp-core/src';
 import { Helpers } from 'tnp-helpers/src';
 
 /***
@@ -49,7 +49,10 @@ export class HostForServer implements OptHostForServer {
       | URL
       | Pick<
           OptHostForServer | HostForServer,
-          'ipOrDomain' | 'aliases' | 'originHostname' | 'skipUpdateOfServerEtcHosts'
+          | 'ipOrDomain'
+          | 'aliases'
+          | 'originHostname'
+          | 'skipUpdateOfServerEtcHosts'
         >,
     name = '',
     disabled = false,
@@ -67,7 +70,7 @@ export class HostForServer implements OptHostForServer {
     }
     if (_.isString(ipOrDomain)) {
       // @ts-ignore
-      const parsed = Helpers.urlParse(ipOrDomain);
+      const parsed = UtilsNetwork.urlParse(ipOrDomain);
       if (parsed) {
         ipOrDomain = parsed as any;
       }
@@ -210,19 +213,19 @@ export class HostForServer implements OptHostForServer {
 
   public get hostname() {
     // @ts-ignore
-    const h = Helpers.urlParse(this.ipOrFirstAlias, true);
+    const h = UtilsNetwork.urlParse(this.ipOrFirstAlias, { forceDomain: true });
     return h ? h.hostname : void 0;
   }
 
   public get hostnameFirstAlias() {
     // @ts-ignore
-    const h = Helpers.urlParse(this.firstAlias, true);
+    const h = UtilsNetwork.urlParse(this.firstAlias, { forceDomain: true });
     return h ? h.hostname : void 0;
   }
 
   public get hostnameIp() {
     // @ts-ignore
-    const h = Helpers.urlParse(this.ip);
+    const h = UtilsNetwork.urlParse(this.ip);
     return h ? h.hostname : void 0;
   }
 
