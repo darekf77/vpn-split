@@ -77,8 +77,8 @@ export class HostForServer implements OptHostForServer {
     }
 
     if (_.isObject(ipOrDomain) && ipOrDomain instanceof URL) {
-      ipOrDomain = ipOrDomain as URL; // @ts-ignore
-      if (Helpers.isValidIp(ipOrDomain?.host)) {
+      ipOrDomain = ipOrDomain as URL;
+      if (UtilsNetwork.isValidIp(ipOrDomain?.host)) {
         return new HostForServer({ ip: ipOrDomain.origin, name, disabled });
       } else {
         return new HostForServer({ domain: ipOrDomain.origin, name, disabled });
@@ -100,8 +100,7 @@ export class HostForServer implements OptHostForServer {
   }
   constructor(data: OptHostForServer) {
     if (data?.ipOrDomain) {
-      // @ts-ignore
-      if (Helpers.isValidIp(data.ipOrDomain)) {
+      if (UtilsNetwork.isValidIp(data.ipOrDomain)) {
         data.ip = data.ipOrDomain;
       } else {
         data.domain = data.ipOrDomain;
