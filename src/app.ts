@@ -4,16 +4,21 @@ import { HOST_BACKEND_PORT } from './app.hosts';
 import { NgModule } from '@angular/core';
 import { Component, OnInit } from '@angular/core';
 
-
 @Component({
   selector: 'app-vpn-split',
   template: 'hello from vpn-split',
-  styles: [` body { margin: 0px !important; } `],
+  styles: [
+    `
+      body {
+        margin: 0px !important;
+      }
+    `,
+  ],
 })
 export class VpnSplitComponent implements OnInit {
-  constructor() { }
+  constructor() {}
 
-  ngOnInit() { }
+  ngOnInit() {}
 }
 
 @NgModule({
@@ -22,17 +27,14 @@ export class VpnSplitComponent implements OnInit {
   declarations: [VpnSplitComponent],
   providers: [],
 })
-export class VpnSplitModule { }
+export class VpnSplitModule {}
 //#endregion
-
 
 async function start() {
   console.log('hello world');
-  console.log('Please start your server on port: '+ HOST_BACKEND_PORT);
+  console.log('Please start your server on port: ' + HOST_BACKEND_PORT);
 }
 
 export default start;
-
-
 
 //#endregion
