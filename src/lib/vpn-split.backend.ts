@@ -21,10 +21,12 @@ import {
   UtilsOs,
   UtilsNetwork,
 } from 'tnp-core/src';
+import { CoreModels } from 'tnp-core/src';
 import { Helpers } from 'tnp-helpers/src';
 
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models';
+
 const HOST_FILE_PATH = UtilsNetwork.getEtcHostsPath();
 
 const log = Log.create('vpn-split', Level.INFO);
@@ -183,7 +185,7 @@ export class VpnSplit {
       vpnServerTargets = [vpnServerTargets];
     }
     for (const vpnServerTarget of vpnServerTargets) {
-      this.preventBadTargetForClient(vpnServerTarget);
+      await this.preventBadTargetForClient(vpnServerTarget);
     }
 
     this.createCertificateIfNotExists();
@@ -408,10 +410,12 @@ Port: ${port}`;
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     const app = express();
     const proxy = httpProxy.createProxyServer({});
+
+    const localIp = await UtilsNetwork.getLocalIpAddresses();
     const currentLocalIps = [
-      'localhost',
-      '127.0.0.1',
-      ...Helpers.allLocalIpAddresses().map(a => a.hostname),
+      CoreModels.localhostDomain,
+      CoreModels.localhostIp127,
+      ...localIp.map(a => a.address),
     ];
 
     app.use(
@@ -735,9 +739,9 @@ Port: ${port}`;
   //#endregion
 
   //#region private methods / prevent bad target for client
-  private preventBadTargetForClient(vpnServerTarget: URL) {
+  private async preventBadTargetForClient(vpnServerTarget: URL) {
     if (!vpnServerTarget) {
-      const currentLocalIp = Helpers.localIpAddress();
+      const currentLocalIp = await UtilsNetwork.getFirstIpV4LocalActiveIpAddress();
       Helpers.error(
         `[vpn-server] Please provide a correct target server.\n` +
           `Example:\n` +
