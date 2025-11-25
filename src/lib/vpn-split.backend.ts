@@ -9,7 +9,7 @@ import axios from 'axios';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Log, Level } from 'ng2-logger/src';
-import { config } from 'tnp-config/src';
+import { config } from 'tnp-core/src';
 import {
   _,
   path,
