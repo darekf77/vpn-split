@@ -187,8 +187,13 @@ export class VpnSplit {
   //#region start client
   public async startClient(
     vpnServerTargets: URL[] | URL,
-    saveHostInUserFolder = false,
+    options: {
+      saveHostInUserFolder?: boolean;
+      useHost?: EtcHosts;
+    },
   ) {
+    options = options || {};
+    const { saveHostInUserFolder } = options;
     if (!Array.isArray(vpnServerTargets)) {
       vpnServerTargets = [vpnServerTargets];
     }
@@ -243,7 +248,9 @@ export class VpnSplit {
         }, {}),
     ) as HostForServer[];
 
-    saveHosts(combinedHostsObj, { saveHostInUserFolder });
+    saveHosts(options.useHost ? options.useHost : combinedHostsObj, {
+      saveHostInUserFolder,
+    });
 
     // Start TCP/HTTPS passthrough
     for (const portToPassthrough of this.portsToPass) {
@@ -829,7 +836,7 @@ function parseHost(
   hosts = {
     ...DefaultEtcHosts,
     ...hosts,
-  }
+  };
   _.keys(hosts).forEach(hostName => {
     const v = hosts[hostName] as HostForServer;
     v.name = hostName;
