@@ -1,6 +1,8 @@
+//#region imports
 import { Utils } from 'tnp-core/src';
 import { CommandType, executeCommand } from 'tnp-helpers/src';
 import type { ExtensionContext } from 'vscode';
+//#endregion
 
 const group = 'Vpn Split CLI essentials';
 
@@ -49,6 +51,3 @@ export function activate(context: ExtensionContext) {
 export function deactivate() {}
 
 export default { commands };
-
-
-        

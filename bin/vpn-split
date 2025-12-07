@@ -2,10 +2,9 @@
 var { fse, crossPlatformPath, path } = require('tnp-core');
 var path = {
   dist: path.join(crossPlatformPath(__dirname), '../dist/start.backend.js'),
-  bundle: path.join(crossPlatformPath(__dirname), '../start.backend.js')
-}
+  bundle: path.join(crossPlatformPath(__dirname), '../start.backend.js'),
+};
 var p = fse.existsSync(path.dist) ? path.dist : path.bundle;
 global.globalSystemToolMode = true;
 var run = require(p).run;
 run(process.argv.slice(2));
-

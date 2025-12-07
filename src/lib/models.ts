@@ -1,5 +1,7 @@
+//#region imports
 import { _, chalk, UtilsNetwork } from 'tnp-core/src';
 import { Helpers } from 'tnp-helpers/src';
+//#endregion
 
 /***
  * @deprecated
@@ -98,6 +100,7 @@ export class HostForServer implements OptHostForServer {
       }
     }
   }
+
   constructor(data: OptHostForServer) {
     if (data?.ipOrDomain) {
       if (UtilsNetwork.isValidIp(data.ipOrDomain)) {
@@ -121,15 +124,18 @@ export class HostForServer implements OptHostForServer {
     }
     this._data = data;
   }
+
   public get ip() {
     if (this.disabled) {
       return '';
     }
     return this._data.ip;
   }
+
   public set ip(newIpAddress: string) {
     this._data.ip = newIpAddress;
   }
+
   public get domain() {
     if (this.disabled) {
       return '';
@@ -157,6 +163,7 @@ export class HostForServer implements OptHostForServer {
   public get name() {
     return this._data.name;
   }
+
   public set name(v) {
     this._data.name = v;
   }
@@ -164,6 +171,7 @@ export class HostForServer implements OptHostForServer {
   public get originHostname() {
     return this._data.originHostname;
   }
+
   public set originHostname(v) {
     this._data.originHostname = v;
   }
@@ -171,15 +179,19 @@ export class HostForServer implements OptHostForServer {
   public get disabled() {
     return this._data.disabled;
   }
+
   public get isDefault() {
     return this._data.isDefault;
   }
+
   public get identifier() {
     return _.kebabCase(this._data.name);
   }
+
   public set disabled(v) {
     this._data.disabled = v;
   }
+
   public get environmentName() {
     return this._data.environmentName || '';
   }
@@ -231,6 +243,7 @@ export class HostForServer implements OptHostForServer {
   public get nameWithIpOrDomain() {
     return chalk.underline(`${this.name} ${this.ipOrDomain}`);
   }
+
   toString = () => {
     return `[string version] ${this.nameWithIpOrDomain}`;
   };

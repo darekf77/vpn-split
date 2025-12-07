@@ -3,7 +3,6 @@
 // import { VpnSplit } from './vpn-split.backend';
 // import { EtcHosts, HostForServer } from './models.backend';
 
-
 // const TO_DELETE = {} as EtcHosts;
 
 // export async function run(args: string[]) {

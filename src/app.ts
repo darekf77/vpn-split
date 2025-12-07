@@ -9,7 +9,7 @@ import Aura from '@primeng/themes/aura'; // @browser
 import { MaterialCssVarsModule } from 'angular-material-css-vars'; // @browser
 import { providePrimeNG } from 'primeng/config'; // @browser
 import { Observable, map } from 'rxjs';
-import { Taon, BaseContext, TAON_CONTEXT } from 'taon/src';
+import { Taon, TaonBaseContext, TAON_CONTEXT } from 'taon/src';
 import { UtilsOs } from 'tnp-core/src';
 
 import { HOST_CONFIG } from './app.hosts';
@@ -20,6 +20,7 @@ console.log('Your backend host ' + HOST_CONFIG['MainContext'].host);
 console.log('Your frontend host ' + HOST_CONFIG['MainContext'].frontendHost);
 
 //#region vpn-split component
+
 //#region @browser
 @Component({
   selector: 'app-vpn-split',
@@ -44,23 +45,29 @@ export class VpnSplitComponent {
   angularVersion =
     VERSION.full +
     ` mode: ${UtilsOs.isRunningInWebSQL() ? ' (websql)' : '(normal)'}`;
+
   userApiService = inject(UserApiService);
+
   readonly users$: Observable<User[]> = this.userApiService.getAll();
+
   readonly hello$ = this.userApiService.userController
     .helloWorld()
     .request()
     .observable.pipe(map(r => r.body.text));
 }
 //#endregion
+
 //#endregion
 
 //#region  vpn-split api service
+
 //#region @browser
 @Injectable({
   providedIn: 'root',
 })
 export class UserApiService extends Taon.Base.AngularService {
   userController = this.injectController(UserController);
+
   getAll(): Observable<User[]> {
     return this.userController
       .getAll()
@@ -69,9 +76,11 @@ export class UserApiService extends Taon.Base.AngularService {
   }
 }
 //#endregion
+
 //#endregion
 
 //#region  vpn-split module
+
 //#region @browser
 @NgModule({
   providers: [
@@ -99,6 +108,7 @@ export class UserApiService extends Taon.Base.AngularService {
 })
 export class VpnSplitModule {}
 //#endregion
+
 //#endregion
 
 //#region  vpn-split entity
@@ -131,6 +141,7 @@ class UserController extends Taon.Base.CrudController<User> {
       //#region @backend
       return os.platform(); // for normal nodejs backend return real value
       //#endregion
+
       return 'no-platform-inside-browser-and-websql-mode';
     };
     //#endregion
@@ -139,12 +150,14 @@ class UserController extends Taon.Base.CrudController<User> {
 //#endregion
 
 //#region  vpn-split migration
+
 //#region @websql
 @Taon.Migration({
   className: 'UserMigration',
 })
 class UserMigration extends Taon.Base.Migration {
   userController = this.injectRepo(User);
+
   async up(): Promise<any> {
     const superAdmin = new User();
     superAdmin.name = 'super-admin';
@@ -152,12 +165,14 @@ class UserMigration extends Taon.Base.Migration {
   }
 }
 //#endregion
+
 //#endregion
 
 //#region  vpn-split context
 var MainContext = Taon.createContext(() => ({
   ...HOST_CONFIG['MainContext'],
-  contexts: { BaseContext },
+  contexts: { TaonBaseContext },
+
   //#region @websql
   /**
    * This is dummy migration - you DO NOT NEED need this migrations object
@@ -169,6 +184,7 @@ var MainContext = Taon.createContext(() => ({
     UserMigration,
   },
   //#endregion
+
   controllers: {
     UserController,
   },

@@ -9,7 +9,7 @@ import axios from 'axios';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Log, Level } from 'ng2-logger/src';
-import { config } from 'tnp-config/src';
+import { config } from 'tnp-core/src';
 import {
   _,
   path,
@@ -46,7 +46,7 @@ const HOST_FILE_PATHUSER = crossPlatformPath([
 ]);
 
 const from = HostForServer.From;
-const defaultHosts = {
+const DefaultEtcHosts = {
   'localhost alias': from({
     ipOrDomain: '127.0.0.1',
     aliases: 'localhost' as any,
@@ -75,6 +75,7 @@ export class VpnSplit {
       return v;
     });
   }
+
   get hostsArrWithoutDefault() {
     return this.hostsArr.filter(f => !f.isDefault);
   }
@@ -82,18 +83,23 @@ export class VpnSplit {
   private get serveKeyName() {
     return 'tmp-' + config.file.server_key;
   }
+
   private get serveKeyPath() {
     return path.join(this.cwd, this.serveKeyName);
   }
+
   private get serveCertName() {
     return 'tmp-' + config.file.server_cert;
   }
+
   private get serveCertPath() {
     return path.join(this.cwd, this.serveCertName);
   }
+
   private get serveCertChainName() {
     return 'tmp-' + config.file.server_chain_cert;
   }
+
   private get serveCertChainPath() {
     return path.join(this.cwd, this.serveCertChainName);
   }
@@ -105,6 +111,7 @@ export class VpnSplit {
 
   //#region singleton
   private static _instances = {};
+
   private constructor(
     private portsToPass: number[],
     private hosts: EtcHosts,
@@ -135,7 +142,7 @@ export class VpnSplit {
     if (!VpnSplit._instances[cwd]) {
       VpnSplit._instances[cwd] = new VpnSplit(
         ports,
-        _.merge(defaultHosts, additionalDefaultHosts),
+        _.merge(DefaultEtcHosts, additionalDefaultHosts),
         cwd,
       );
     }
@@ -146,6 +153,7 @@ export class VpnSplit {
   //#region start server
   async startServer(saveHostInUserFolder = false) {
     this.createCertificateIfNotExists();
+
     //#region modify /etc/host to direct traffic appropriately
     saveHosts(this.hosts, { saveHostInUserFolder });
     //#endregion
@@ -741,7 +749,8 @@ Port: ${port}`;
   //#region private methods / prevent bad target for client
   private async preventBadTargetForClient(vpnServerTarget: URL) {
     if (!vpnServerTarget) {
-      const currentLocalIp = await UtilsNetwork.getFirstIpV4LocalActiveIpAddress();
+      const currentLocalIp =
+        await UtilsNetwork.getFirstIpV4LocalActiveIpAddress();
       Helpers.error(
         `[vpn-server] Please provide a correct target server.\n` +
           `Example:\n` +
@@ -816,6 +825,11 @@ function parseHost(
   saveHostInUserFolder: boolean,
   useLocal = false,
 ) {
+  // hosts = _.merge(hosts, DefaultEtcHosts);
+  hosts = {
+    ...DefaultEtcHosts,
+    ...hosts,
+  }
   _.keys(hosts).forEach(hostName => {
     const v = hosts[hostName] as HostForServer;
     v.name = hostName;

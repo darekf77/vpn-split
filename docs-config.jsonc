@@ -2,13 +2,13 @@
   "site_name": "vpn-split",
   "externalDocs": {
     "mdfiles": [],
-    "projects": []
+    "projects": [],
   },
   "omitFilesPatters": [],
   "priorityOrder": [],
   "mapTitlesNames": {
-    "README.md": "Introduction"
+    "README.md": "Introduction",
   },
   "customCssPath": "custom.css",
-  "customJsPath": "custom.js"
+  "customJsPath": "custom.js",
 }

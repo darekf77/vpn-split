@@ -4,10 +4,14 @@
   "dependenciesNamesForNpmLib": ["tnp-helpers", "hostile", "is-elevated"],
   "appId": "com.domain.example.vpn-split",
 
-  "autoReleaseConfigAllowedItems": [{
-    "artifactName": "npm-lib-and-cli-tool"
-  }],
+  "autoReleaseConfigAllowedItems": [
+    {
+      "artifactName": "npm-lib-and-cli-tool",
+    },
+  ],
 
+  "isomorphicDependenciesForNpmLib": [],
+  "peerDependenciesNamesForNpmLib": [],
   "resources": [],
 
   "packageJsonOverride": {
@@ -15,6 +19,6 @@
     "description": "Description for vpn-split. Hello world!",
     "license": "MIT",
     "private": false,
-    "scripts": {}
-  }
+    "scripts": {},
+  },
 }

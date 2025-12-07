@@ -8,6 +8,6 @@ const env: Partial<EnvOptions> = {
   },
   build: {
     angularProd: true,
-  }
+  },
 };
 export default env;

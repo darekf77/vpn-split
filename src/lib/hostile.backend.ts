@@ -1,26 +1,26 @@
-
+//#region imports
 import * as hostile from 'hostile';
 import { chalk, net } from 'tnp-core/src';
+//#endregion
 
 export class Hostile {
-
   /**
    * Display all current ip records
    */
   list() {
-    var lines
+    var lines;
     try {
-      lines = hostile.get(false)
+      lines = hostile.get(false);
     } catch (err) {
-      return this.error(err)
+      return this.error(err);
     }
-    lines.forEach((item) => {
+    lines.forEach(item => {
       if (item.length > 1) {
-        console.log(item[0], chalk.green(item[1]))
+        console.log(item[0], chalk.green(item[1]));
       } else {
-        console.log(item)
+        console.log(item);
       }
-    })
+    });
   }
 
   /**
@@ -30,21 +30,21 @@ export class Hostile {
    */
   set(ip, host) {
     if (!ip || !host) {
-      return this.error('Invalid syntax: hostile set <ip> <host>')
+      return this.error('Invalid syntax: hostile set <ip> <host>');
     }
 
     if (ip === 'local' || ip === 'localhost') {
-      ip = '127.0.0.1'
+      ip = '127.0.0.1';
     } else if (!net.isIP(ip)) {
-      return this.error('Invalid IP address')
+      return this.error('Invalid IP address');
     }
 
     try {
-      hostile.set(ip, host)
+      hostile.set(ip, host);
     } catch (err) {
-      return this.error('Error: ' + err.message + '. Are you running as root?')
+      return this.error('Error: ' + err.message + '. Are you running as root?');
     }
-    console.log(chalk.green('Added ' + host))
+    console.log(chalk.green('Added ' + host));
   }
 
   /**
@@ -52,22 +52,24 @@ export class Hostile {
    * @param {string} host
    */
   remove(host) {
-    var lines
+    var lines;
     try {
-      lines = hostile.get(false)
+      lines = hostile.get(false);
     } catch (err) {
-      return this.error(err)
+      return this.error(err);
     }
-    lines.forEach((item) => {
+    lines.forEach(item => {
       if (item[1] === host) {
         try {
-          hostile.remove(item[0], host)
+          hostile.remove(item[0], host);
         } catch (err) {
-          return this.error('Error: ' + err.message + '. Are you running as root?')
+          return this.error(
+            'Error: ' + err.message + '. Are you running as root?',
+          );
         }
-        console.log(chalk.green('Removed ' + host))
+        console.log(chalk.green('Removed ' + host));
       }
-    })
+    });
   }
 
   /**
@@ -75,12 +77,12 @@ export class Hostile {
    * @param {string} filePath
    */
   load(filePath) {
-    var lines = this.parseFile(filePath)
+    var lines = this.parseFile(filePath);
 
-    lines.forEach((item) => {
-      this.set(item[0], item[1])
-    })
-    console.log(chalk.green('\nAdded %d hosts!'), lines.length)
+    lines.forEach(item => {
+      this.set(item[0], item[1]);
+    });
+    console.log(chalk.green('\nAdded %d hosts!'), lines.length);
   }
 
   /**
@@ -88,12 +90,12 @@ export class Hostile {
    * @param {string} filePath
    */
   unload(filePath) {
-    var lines = this.parseFile(filePath)
+    var lines = this.parseFile(filePath);
 
-    lines.forEach((item) => {
-      this.remove(item[1])
-    })
-    console.log(chalk.green('Removed %d hosts!'), lines.length)
+    lines.forEach(item => {
+      this.remove(item[1]);
+    });
+    console.log(chalk.green('Removed %d hosts!'), lines.length);
   }
 
   /**
@@ -101,13 +103,13 @@ export class Hostile {
    * @param {string} filePath
    */
   parseFile(filePath) {
-    var lines
+    var lines;
     try {
-      lines = hostile.getFile(filePath, false)
+      lines = hostile.getFile(filePath, false);
     } catch (err) {
-      return this.error(err)
+      return this.error(err);
     }
-    return lines
+    return lines;
   }
 
   /**
@@ -115,8 +117,7 @@ export class Hostile {
    * @param {string} message
    */
   error(err) {
-    console.error(chalk.red(err.message || err))
-    process.exit(-1)
+    console.error(chalk.red(err.message || err));
+    process.exit(-1);
   }
-
 }
