@@ -9,7 +9,7 @@ import axios from 'axios';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Log, Level } from 'ng2-logger/src';
-import { config } from 'tnp-core/src';
+import { config, Utils } from 'tnp-core/src';
 import {
   _,
   path,
@@ -26,6 +26,7 @@ import { Helpers } from 'tnp-helpers/src';
 
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models';
+import { execSync } from 'child_process';
 
 const HOST_FILE_PATH = UtilsNetwork.getEtcHostsPath();
 
@@ -154,8 +155,24 @@ export class VpnSplit {
   async startServer(saveHostInUserFolder = false) {
     this.createCertificateIfNotExists();
 
+    const hostsForCert = this.hosts;
+
+    // const domainsForCert: string[] = Utils.uniqArray(
+    //   Object.keys(hostsForCert).reduce((prev, curr) => {
+    //     const host = hostsForCert[curr] as HostForServer;
+    //     host.aliases.forEach(alias => {
+    //       if (!host.isDefault) {
+    //         prev.push(alias);
+    //       }
+    //     });
+    //     return prev;
+    //   }, [] as string[]),
+    // );
+
+    // this.ensureMkcertCertificate(domainsForCert);
+
     //#region modify /etc/host to direct traffic appropriately
-    saveHosts(this.hosts, { saveHostInUserFolder });
+    saveHosts(hostsForCert, { saveHostInUserFolder });
     //#endregion
 
     // Start TCP/HTTPS passthrough
@@ -209,6 +226,7 @@ export class VpnSplit {
       alias: string;
       originHostname?: string;
     }> = [];
+
     for (const vpnServerTarget of vpnServerTargets) {
       const newHosts = await this.getRemoteHosts(vpnServerTarget);
       for (const host of newHosts) {
@@ -248,7 +266,23 @@ export class VpnSplit {
         }, {}),
     ) as HostForServer[];
 
-    saveHosts(options.useHost ? options.useHost : combinedHostsObj, {
+    const hostsForCert = options.useHost ? options.useHost : combinedHostsObj;
+
+    // const domainsForCert: string[] = Utils.uniqArray(
+    //   Object.keys(hostsForCert).reduce((prev, curr) => {
+    //     const host = hostsForCert[curr] as HostForServer;
+    //     host.aliases.forEach(alias => {
+    //       if (!host.isDefault) {
+    //         prev.push(alias);
+    //       }
+    //     });
+    //     return prev;
+    //   }, [] as string[]),
+    // );
+
+    // this.ensureMkcertCertificate(domainsForCert);
+
+    saveHosts(hostsForCert, {
       saveHostInUserFolder,
     });
 
@@ -361,10 +395,11 @@ export class VpnSplit {
             key: fse.readFileSync(this.serveKeyPath),
             cert: fse.readFileSync(this.serveCertPath),
           },
-          agent: new https.Agent({
-            secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
-          }),
-          secure: false,
+          // agent: new https.Agent({
+          //   secureOptions: crypto.constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
+          // }),
+          // changeOrigin: true,
+          secure: true,
         }
       : ({ target } as httpProxy.ServerOptions);
   }
@@ -752,6 +787,146 @@ Port: ${port}`;
     return 80;
   }
   //#endregion
+
+  // Put this method in your VpnSplit class (or outside as a static helper)
+  private ensureMkcertCertificate(domains: string[]) {
+    //#region @backendFunc
+
+    // console.log('Domains for cert:', domains);
+    // Helpers.error(``,false,true);
+
+    if (!UtilsOs.commandExistsSync('mkcert')) {
+      Helpers.error('[vpn-split] mkcert is not installed.', false, true);
+    }
+
+    const certPath = this.serveCertPath; // e.g. .../tmp-server_cert
+    const keyPath = this.serveKeyPath; // e.g. .../tmp-server_key
+
+    const allNames = [
+      'localhost',
+      '127.0.0.1',
+      // '::1',
+      // optional: common local networks so the cert also works for raw IP access
+      // '10.0.0.0/8',
+      // '172.16.0.0/12',
+      // '192.168.0.0/16',
+      ...domains, // <-- your 120+ domains here
+    ];
+
+    // Helper: run mkcert and capture output
+    const runMkcert = (args: string) => {
+      try {
+        return execSync(`mkcert ${args}`, { stdio: 'pipe' }).toString().trim();
+      } catch (err: any) {
+        const stderr = err.stderr?.toString() || '';
+        if (stderr.includes('command not found')) {
+          Helpers.error(
+            '[vpn-split] mkcert is not installed. Install it first: https://github.com/FiloSottile/mkcert',
+            false,
+            true,
+          );
+        }
+        throw err;
+      }
+    };
+
+    // 1. Check if the root CA is already installed
+    let caInstalled = false;
+    try {
+      const output = runMkcert('-CAROOT');
+      // If -CAROOT succeeds and the root files exist → CA is installed
+      const rootDir = crossPlatformPath(output.trim());
+      if (
+        rootDir &&
+        fse.pathExistsSync(crossPlatformPath([rootDir, 'rootCA.pem']))
+      ) {
+        Helpers.info('[vpn-split] mkcert local CA is already installed');
+        caInstalled = true;
+      } else {
+        Helpers.info('[vpn-split] mkcert local CA is NOT installed');
+      }
+    } catch {
+      Helpers.info('[vpn-split] mkcert error checking local CA installation');
+    }
+
+    // 2. Install the local CA if needed (requires sudo once)
+    if (!caInstalled) {
+      Helpers.info(
+        '[vpn-split] Installing mkcert local CA (requires sudo once)...',
+      );
+      try {
+        execSync('mkcert -install', { stdio: 'inherit' });
+        Helpers.info('[vpn-split] Local CA installed and trusted system-wide');
+      } catch (err) {
+        Helpers.error(
+          '[vpn-split] Failed to run "mkcert -install". Run it manually with sudo.',
+          false,
+          true,
+        );
+      }
+    }
+
+    const isWindows = process.platform === 'win32';
+
+    // const maxArgLength = isWindows ? 2000 : 8000; // Conservative limits
+    let tempCertFiles: string[] = [];
+    let tempKeyFiles: string[] = [];
+
+    if (allNames.length <= 20 || !isWindows) {
+      // Small list or non-Windows: one shot
+      const namesArg = allNames.map(d => `"${d}"`).join(' ');
+      const mkcertCmd = `-key-file "${keyPath}" -cert-file "${certPath}" ${namesArg}`;
+      fse.ensureDirSync(path.dirname(certPath));
+      runMkcert(mkcertCmd);
+    } else {
+      // Big list on Windows: Batch into chunks of ~20 domains
+      const chunkSize = 20;
+      fse.ensureDirSync(path.dirname(certPath));
+
+      for (let i = 0; i < allNames.length; i += chunkSize) {
+        const chunk = allNames.slice(i, i + chunkSize);
+        const tempCert = `${certPath}.${i}.pem`;
+        const tempKey = `${keyPath}.${i}.pem`;
+        const namesArg = chunk.map(d => `"${d}"`).join(' ');
+        const mkcertCmd = `-key-file "${tempKey}" -cert-file "${tempCert}" ${namesArg}`;
+
+        Helpers.info(
+          `[vpn-split] Generating batch ${Math.floor(i / chunkSize) + 1}/${Math.ceil(allNames.length / chunkSize)}...`,
+        );
+        runMkcert(mkcertCmd);
+
+        tempCertFiles.push(tempCert);
+        tempKeyFiles.push(tempKey);
+      }
+
+      // 3. Merge all temp certs into one (cert chain + leaves) and pick first key
+      Helpers.info('[vpn-split] Merging batches into final cert...');
+      const firstKey = tempKeyFiles[0];
+      fse.copySync(firstKey, keyPath); // Use the first key (all are identical)
+
+      // Concat all certs (mkcert output is already PEM-formatted)
+      const mergedCertContent = tempCertFiles
+        .map(f => fse.readFileSync(f, 'utf8'))
+        .join('\n'); // PEM certs stack nicely
+      fse.writeFileSync(certPath, mergedCertContent);
+
+      // Clean up temps
+      tempCertFiles.forEach(f => fse.removeSync(f));
+      tempKeyFiles.slice(1).forEach(f => fse.removeSync(f)); // Keep first key as backup if needed
+
+      Helpers.info('[vpn-split] Merged cert ready!');
+    }
+
+    // Verify
+    if (!fse.existsSync(certPath) || !fse.existsSync(keyPath)) {
+      Helpers.error('[vpn-split] Files missing after generation!', false, true);
+    } else {
+      Helpers.info(
+        `[vpn-split] Trusted cert ready: ${allNames.length} hostnames covered`,
+      );
+    }
+    //#endregion
+  }
 
   //#region private methods / prevent bad target for client
   private async preventBadTargetForClient(vpnServerTarget: URL) {
