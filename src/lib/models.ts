@@ -1,6 +1,6 @@
 //#region imports
 import { _, chalk, UtilsNetwork } from 'tnp-core/src';
-import { Helpers } from 'tnp-helpers/src';
+import { Helpers, HelpersTaon } from 'tnp-helpers/src';
 //#endregion
 
 /***
@@ -119,8 +119,7 @@ export class HostForServer implements OptHostForServer {
       data = {};
     }
     if (_.isString(data?.aliases)) {
-      // @ts-ignore
-      data.aliases = Helpers.strings.splitIfNeed(data.aliases);
+      data.aliases = HelpersTaon.strings.splitIfNeed(data.aliases);
     }
     this._data = data;
   }
