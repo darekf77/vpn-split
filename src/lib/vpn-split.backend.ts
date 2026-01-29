@@ -1,4 +1,5 @@
 //#region imports
+import { execSync } from 'child_process';
 import * as crypto from 'crypto';
 // TODO I am using TCP ugrade not UDP!
 import * as dgram from 'dgram'; // <-- For UDP sockets
@@ -22,11 +23,10 @@ import {
   UtilsNetwork,
 } from 'tnp-core/src';
 import { CoreModels } from 'tnp-core/src';
-import { Helpers } from 'tnp-helpers/src';
+import { Helpers, HelpersTaon } from 'tnp-helpers/src';
 
 import { Hostile } from './hostile.backend';
 import { EtcHosts, HostForServer, OptHostForServer } from './models';
-import { execSync } from 'child_process';
 
 const HOST_FILE_PATH = UtilsNetwork.getEtcHostsPath();
 
@@ -482,7 +482,7 @@ Port: ${port}`;
               JSON.stringify(
                 this.hostsArrWithoutDefault.map(h => ({
                   ip: h.ip,
-                  alias: Helpers.arrays.from(h.aliases).join(' '),
+                  alias: HelpersTaon.arrays.from(h.aliases).join(' '),
                 })),
               ),
             );
