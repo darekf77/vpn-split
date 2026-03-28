@@ -162,7 +162,11 @@
   ],
 
   "files.watcherExclude": {
-    "local_release/**": true
+    "local_release/**": true,
+    "tmp-*/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/dist-nocutsrc/**": true
   },
 
   "[markdown]": {
