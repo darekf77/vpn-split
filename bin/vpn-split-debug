@@ -1,10 +1,5 @@
-#!/usr/bin/env node --inspect
-var { fse, crossPlatformPath, path } = require('tnp-core');
-var path = {
-  dist: path.join(crossPlatformPath(__dirname), '../dist/start.backend.js'),
-  bundle: path.join(crossPlatformPath(__dirname), '../start.backend.js'),
-};
-var p = fse.existsSync(path.dist) ? path.dist : path.bundle;
-global.globalSystemToolMode = true;
-var run = require(p).run;
-run(process.argv.slice(2));
+#!/usr/bin/env -S node --inspect --stack-trace-limit=10000 --no-deprecation
+//#region @backend
+// --stack-trace-limit=10000
+require('./start');
+//#endregion
