@@ -1,6 +1,6 @@
 {
   "name": "vpn-split",
-  "version": "21.0.36",
+  "version": "21.0.35",
   "scripts": {
     "taon init": "taon init",
     "taon start": "taon start",
