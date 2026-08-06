@@ -1,6 +1,6 @@
 //#region imports
 import * as hostile from 'hostile';
-import { chalk, net } from 'tnp-core/src';
+import { chalk } from 'tnp-core/src';
 //#endregion
 
 export class Hostile {
@@ -29,6 +29,8 @@ export class Hostile {
    * @param {string} host
    */
   set(ip, host) {
+    //#region @backend
+    const net = require('net');
     if (!ip || !host) {
       return this.error('Invalid syntax: hostile set <ip> <host>');
     }
@@ -45,6 +47,7 @@ export class Hostile {
       return this.error('Error: ' + err.message + '. Are you running as root?');
     }
     console.log(chalk.green('Added ' + host));
+    //#endregion
   }
 
   /**

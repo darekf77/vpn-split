@@ -6,7 +6,7 @@ import * as dgram from 'dgram'; // <-- For UDP sockets
 import * as http from 'http';
 import { URL } from 'url';
 
-import axios from 'axios';
+import { axios } from 'tnp-core/src';
 import * as express from 'express';
 import * as httpProxy from 'http-proxy';
 import { Log, Level } from 'ng2-logger/src';
@@ -312,7 +312,7 @@ export class VpnSplit {
   private async getRemoteHosts(vpnServerTarget: URL) {
     try {
       const url = `http://${vpnServerTarget.hostname}${SERVERS_PATH}`;
-      const response = await axios({ url, method: 'GET' });
+      const response = await axios.request({ url, method: 'GET' });
       return response.data as {
         ip: string;
         alias: string;
