@@ -61,7 +61,6 @@
 
   "editor.rulers": [80, 120],
   "html.format.wrapAttributes": "force-aligned",
-  "workbench.colorTheme": "Light+",
   "tslint.autoFixOnSave": true,
   "eslint.enable": true,
   "tslint.enable": false,
