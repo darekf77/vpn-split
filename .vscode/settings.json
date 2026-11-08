@@ -75,7 +75,6 @@
     "dist": true,
     "package-lock.json": true,
     "tmp-*": true,
-    "src/lib/env/**/*.*": true,
     ".firedev": true,
     ".taon": true,
     ".tnp": true,
@@ -88,17 +87,17 @@
     "**/dist": true,
     "**/package-lock.json": true,
     "**/tmp-*": true,
-    "**/src/lib/env/**/*.*": true,
-    "**/.firedev": true,
-    "**/.taon": true,
-    "**/.tnp": true,
     "projects": true,
     "dist-*": true,
     "**/dist-*": true,
     "*.rest": true,
     "**/*.rest": true,
     "src/app.auto-gen-docs.md": true,
-    "src/app.auto-gen-ver.js": true
+    "src/app.auto-gen-ver.js": true,
+    ".ai": true,
+    "databases": true,
+    "**/.ai": true,
+    "**/databases": true
   },
 
   "[typescriptreact]": {
