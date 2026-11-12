@@ -67,7 +67,7 @@ export class VpnSplitComponent {
   providedIn: 'root',
 })
 export class UserApiService extends Taon.Base.AngularService {
-  userController = this.injectController(UserController);
+  userController = this.inject(UserController);
 
   getAll(): Observable<User[]> {
     return this.userController
